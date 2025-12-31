@@ -1,10 +1,21 @@
 import React from 'react';
 import { Star, ShoppingCart, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Product } from '@/data/products';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  original_price: number | null;
+  image: string | null;
+  category: string;
+  in_stock: boolean | null;
+  badge: string | null;
+}
 
 interface ProductCardProps {
   product: Product;
@@ -14,13 +25,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart, items } = useCart();
   const { toast } = useToast();
   const isInCart = items.some(item => item.id === product.id);
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+  const discount = product.original_price
+    ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
+  const inStock = product.in_stock !== false;
 
   const handleAddToCart = () => {
-    if (!product.inStock) return;
-    addToCart(product);
+    if (!inStock) return;
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image || '',
+    });
     toast({
       title: "تمت الإضافة للسلة",
       description: `تم إضافة ${product.name} إلى سلة التسوق`,
@@ -32,7 +49,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-muted">
         <img
-          src={product.image}
+          src={product.image || '/placeholder.svg'}
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
@@ -44,7 +61,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               خصم {discount}%
             </span>
           )}
-          {!product.inStock && (
+          {product.badge && (
+            <span className="px-3 py-1 gradient-primary text-primary-foreground text-sm font-bold rounded-full">
+              {product.badge}
+            </span>
+          )}
+          {!inStock && (
             <span className="px-3 py-1 bg-destructive text-destructive-foreground text-sm font-bold rounded-full">
               نفذ المخزون
             </span>
@@ -57,7 +79,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             variant={isInCart ? "success" : "default"}
             className="w-full"
             onClick={handleAddToCart}
-            disabled={!product.inStock}
+            disabled={!inStock}
           >
             {isInCart ? (
               <>
@@ -84,26 +106,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {product.name}
         </h3>
         
-        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-          {product.description}
-        </p>
-
-        {/* Rating */}
-        <div className="flex items-center gap-1 mb-3">
-          <Star className="w-4 h-4 fill-secondary text-secondary" />
-          <span className="text-sm font-medium text-foreground">{product.rating}</span>
-          <span className="text-sm text-muted-foreground">({product.reviews} تقييم)</span>
-        </div>
+        {product.description && (
+          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+            {product.description}
+          </p>
+        )}
 
         {/* Price */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-3">
           <div className="flex items-center gap-2">
             <span className="text-xl font-bold text-primary">
               {product.price} ج.م
             </span>
-            {product.originalPrice && (
+            {product.original_price && (
               <span className="text-sm text-muted-foreground line-through">
-                {product.originalPrice} ج.م
+                {product.original_price} ج.م
               </span>
             )}
           </div>

@@ -17,6 +17,7 @@ interface CheckoutModalProps {
 }
 
 const PAYMENT_NUMBER = "01025529130";
+const WHATSAPP_NUMBER = "201025529130"; // رقم واتساب المشرف بصيغة دولية
 
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const { items, totalPrice, clearCart } = useCart();
@@ -145,10 +146,37 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
 
     await supabase.from('order_items').insert(orderItems);
 
+    // إنشاء رسالة واتساب
+    const orderItemsText = items.map(item => `• ${item.name} (${item.quantity}×)`).join('\n');
+    const whatsappMessage = `🛒 *طلب جديد من حمودي ستور*
+
+📦 *رقم الطلب:* ${orderData.order_number}
+
+👤 *العميل:* ${formData.name}
+📱 *الهاتف:* ${formData.phone}
+📍 *المحافظة:* ${selectedGovernorate?.name}
+🏠 *العنوان:* ${formData.address}
+${formData.notes ? `📝 *ملاحظات:* ${formData.notes}` : ''}
+
+🛍️ *المنتجات:*
+${orderItemsText}
+
+💰 *المنتجات:* ${totalPrice} ج.م
+🚚 *التوصيل:* ${deliveryFee} ج.م
+✅ *الإجمالي:* ${finalTotal} ج.م
+
+💳 *طريقة الدفع:* فودافون كاش / انستا باي`;
+
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`;
+    
     toast({
       title: "تم تأكيد الطلب!",
-      description: `رقم طلبك: ${orderData.order_number} - سنتواصل معك قريباً`,
+      description: `رقم طلبك: ${orderData.order_number} - جاري فتح واتساب...`,
     });
+    
+    // فتح واتساب في نافذة جديدة
+    window.open(whatsappUrl, '_blank');
+    
     clearCart();
     onClose();
     setStep(1);
