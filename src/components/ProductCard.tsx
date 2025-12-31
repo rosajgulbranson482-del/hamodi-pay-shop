@@ -1,9 +1,16 @@
-import React from 'react';
-import { Star, ShoppingCart, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShoppingCart, Check, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+
+interface ProductImage {
+  id: string;
+  image_url: string;
+  display_order: number;
+}
 
 interface Product {
   id: string;
@@ -24,11 +31,36 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart, items } = useCart();
   const { toast } = useToast();
+  const [additionalImages, setAdditionalImages] = useState<ProductImage[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
   const isInCart = items.some(item => item.id === product.id);
   const discount = product.original_price
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
   const inStock = product.in_stock !== false;
+
+  // Build all images array: main image + additional images
+  const allImages = [
+    product.image,
+    ...additionalImages.map(img => img.image_url)
+  ].filter(Boolean) as string[];
+
+  useEffect(() => {
+    const fetchAdditionalImages = async () => {
+      const { data } = await supabase
+        .from('product_images')
+        .select('*')
+        .eq('product_id', product.id)
+        .order('display_order', { ascending: true });
+      
+      if (data && data.length > 0) {
+        setAdditionalImages(data);
+      }
+    };
+
+    fetchAdditionalImages();
+  }, [product.id]);
 
   const handleAddToCart = () => {
     if (!inStock) return;
@@ -44,15 +76,62 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     });
   };
 
+  const nextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+  };
+
+  const prevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+  };
+
   return (
     <div className="group bg-card rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-border/50 hover:border-primary/30 animate-fade-in">
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-muted">
         <img
-          src={product.image || '/placeholder.svg'}
+          src={allImages[currentImageIndex] || '/placeholder.svg'}
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
+        
+        {/* Image Navigation */}
+        {allImages.length > 1 && (
+          <>
+            <button
+              onClick={nextImage}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-background/80 hover:bg-background rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={prevImage}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-background/80 hover:bg-background rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+            
+            {/* Image Dots */}
+            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
+              {allImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(idx);
+                  }}
+                  className={cn(
+                    "w-2 h-2 rounded-full transition-all",
+                    idx === currentImageIndex 
+                      ? "bg-primary w-4" 
+                      : "bg-background/60 hover:bg-background/80"
+                  )}
+                />
+              ))}
+            </div>
+          </>
+        )}
         
         {/* Badges */}
         <div className="absolute top-3 right-3 flex flex-col gap-2">
@@ -72,6 +151,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </span>
           )}
         </div>
+
+        {/* Image Counter */}
+        {allImages.length > 1 && (
+          <div className="absolute top-3 left-3 bg-background/80 text-foreground text-xs px-2 py-1 rounded-full">
+            {currentImageIndex + 1}/{allImages.length}
+          </div>
+        )}
 
         {/* Quick Add Button */}
         <div className="absolute inset-x-3 bottom-3 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
