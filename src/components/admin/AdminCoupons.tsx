@@ -126,7 +126,7 @@ const AdminCoupons: React.FC = () => {
     setSaving(true);
 
     const couponData = {
-      code: formData.code.toUpperCase(),
+      code: formData.code.toUpperCase().trim(),
       discount_type: formData.discount_type,
       discount_value: parseFloat(formData.discount_value),
       min_order_amount: formData.min_order_amount ? parseFloat(formData.min_order_amount) : 0,
