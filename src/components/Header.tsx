@@ -48,6 +48,12 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
 
           {/* Cart & Mobile Menu */}
           <div className="flex items-center gap-2">
+            <Link to="/auth" className="hidden sm:block">
+              <Button variant="ghost" size="sm">
+                دخول المشرف
+              </Button>
+            </Link>
+
             <Button
               variant="outline"
               size="icon"
@@ -95,6 +101,13 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             >
               <Search className="w-4 h-4" />
               تتبع الطلب
+            </Link>
+            <Link
+              to="/auth"
+              className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              دخول المشرف
             </Link>
             <a
               href="#contact"

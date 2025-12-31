@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -73,6 +74,15 @@ const Auth: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4" dir="rtl">
+      <Helmet>
+        <title>دخول المشرف | حمودي ستور</title>
+        <meta
+          name="description"
+          content="تسجيل دخول المشرف لإدارة المنتجات والطلبات في حمودي ستور"
+        />
+        <link rel="canonical" href={`${window.location.origin}/auth`} />
+      </Helmet>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow">
@@ -86,51 +96,62 @@ const Auth: React.FC = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-card rounded-2xl p-6 shadow-lg border border-border space-y-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-primary" />
-              البريد الإلكتروني
-            </Label>
-            <Input
-              type="email"
-              placeholder="admin@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-primary" />
-              كلمة المرور
-            </Label>
-            <Input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-            />
-          </div>
-
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-            {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'}
-          </Button>
-
-          <div className="text-center">
-            <button
+        <div className="bg-card rounded-2xl p-6 shadow-lg border border-border space-y-4">
+          <div className="grid grid-cols-2 bg-muted rounded-xl p-1">
+            <Button
               type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-primary hover:underline"
+              variant={isLogin ? 'default' : 'ghost'}
+              className="w-full"
+              onClick={() => setIsLogin(true)}
             >
-              {isLogin ? 'ليس لديك حساب؟ أنشئ واحداً' : 'لديك حساب؟ سجل الدخول'}
-            </button>
+              تسجيل الدخول
+            </Button>
+            <Button
+              type="button"
+              variant={!isLogin ? 'default' : 'ghost'}
+              className="w-full"
+              onClick={() => setIsLogin(false)}
+            >
+              إنشاء حساب
+            </Button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-primary" />
+                البريد الإلكتروني
+              </Label>
+              <Input
+                type="email"
+                placeholder="admin@hamoudi.store"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-primary" />
+                كلمة المرور
+              </Label>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+              {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'}
+            </Button>
+          </form>
+        </div>
 
         <div className="text-center mt-4">
           <a href="/" className="text-sm text-muted-foreground hover:text-primary">
