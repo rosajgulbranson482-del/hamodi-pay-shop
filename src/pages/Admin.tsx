@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -81,6 +82,12 @@ const Admin: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
+      <Helmet>
+        <title>لوحة التحكم | حمودي ستور</title>
+        <meta name="description" content="لوحة تحكم حمودي ستور لإدارة المنتجات والطلبات" />
+        <link rel="canonical" href={`${window.location.origin}/admin`} />
+      </Helmet>
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4">
