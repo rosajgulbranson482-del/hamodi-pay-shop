@@ -4,14 +4,24 @@ import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import CartDrawer from '@/components/CartDrawer';
 
 interface HeaderProps {
-  onCartClick: () => void;
+  onCartClick?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
   const { totalItems } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const handleCartClick = () => {
+    if (onCartClick) {
+      onCartClick();
+    } else {
+      setIsCartOpen(true);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
@@ -58,7 +68,7 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
               variant="outline"
               size="icon"
               className="relative"
-              onClick={onCartClick}
+              onClick={handleCartClick}
             >
               <ShoppingCart className="w-5 h-5" />
               {totalItems > 0 && (
@@ -119,6 +129,11 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
           </div>
         </nav>
       </div>
+
+      {/* Cart Drawer for standalone usage */}
+      {!onCartClick && (
+        <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      )}
     </header>
   );
 };

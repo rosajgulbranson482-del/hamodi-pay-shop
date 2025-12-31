@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 interface ProductImage {
   id: string;
@@ -89,7 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
     <div className="group bg-card rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-border/50 hover:border-primary/30 animate-fade-in">
       {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-muted">
+      <Link to={`/product/${product.id}`} className="block relative aspect-square overflow-hidden bg-muted">
         <img
           src={allImages[currentImageIndex] || '/placeholder.svg'}
           alt={product.name}
@@ -180,7 +181,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             )}
           </Button>
         </div>
-      </div>
+      </Link>
 
       {/* Content */}
       <div className="p-4">
