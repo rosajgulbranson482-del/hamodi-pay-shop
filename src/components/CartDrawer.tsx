@@ -1,17 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { cn } from '@/lib/utils';
+import CheckoutModal from '@/components/CheckoutModal';
 
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  onCheckout: () => void;
+  onCheckout?: () => void;
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) => {
   const { items, removeFromCart, updateQuantity, totalPrice, totalItems } = useCart();
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+  const handleCheckout = () => {
+    if (onCheckout) {
+      onCheckout();
+    } else {
+      setIsCheckoutOpen(true);
+    }
+  };
 
   return (
     <>
@@ -123,13 +133,18 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
               variant="default"
               size="lg"
               className="w-full"
-              onClick={onCheckout}
+              onClick={handleCheckout}
             >
               متابعة الشراء
             </Button>
           </div>
         )}
       </div>
+
+      {/* Checkout Modal for standalone usage */}
+      {!onCheckout && (
+        <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} />
+      )}
     </>
   );
 };
