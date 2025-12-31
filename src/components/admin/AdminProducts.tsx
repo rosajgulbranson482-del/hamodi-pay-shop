@@ -13,7 +13,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Loader2, Package, Upload, X, Image } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, Package, Upload, X, Image, GripVertical } from 'lucide-react';
+
+interface ProductImage {
+  id: string;
+  image_url: string;
+  display_order: number;
+}
 
 interface Product {
   id: string;
@@ -47,8 +53,10 @@ const AdminProducts: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [productImages, setProductImages] = useState<ProductImage[]>([]);
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const multiFileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -77,6 +85,18 @@ const AdminProducts: React.FC = () => {
     setLoading(false);
   };
 
+  const fetchProductImages = async (productId: string) => {
+    const { data, error } = await supabase
+      .from('product_images')
+      .select('*')
+      .eq('product_id', productId)
+      .order('display_order', { ascending: true });
+
+    if (!error && data) {
+      setProductImages(data);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -94,10 +114,11 @@ const AdminProducts: React.FC = () => {
       stock_count: '0',
     });
     setEditingProduct(null);
-    setImagePreview(null);
+    setMainImagePreview(null);
+    setProductImages([]);
   };
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = async (product: Product) => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
@@ -110,62 +131,103 @@ const AdminProducts: React.FC = () => {
       in_stock: product.in_stock ?? true,
       stock_count: product.stock_count?.toString() || '0',
     });
-    setImagePreview(product.image || null);
+    setMainImagePreview(product.image || null);
+    await fetchProductImages(product.id);
     setIsDialogOpen(true);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadImage = async (file: File): Promise<string | null> => {
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "خطأ", description: "يرجى اختيار ملف صورة", variant: "destructive" });
+      return null;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "خطأ", description: "حجم الصورة يجب أن يكون أقل من 5MB", variant: "destructive" });
+      return null;
+    }
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `products/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast({ title: "خطأ", description: uploadError.message, variant: "destructive" });
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({ title: "خطأ", description: "يرجى اختيار ملف صورة", variant: "destructive" });
-      return;
+    setUploading(true);
+    const url = await uploadImage(file);
+    if (url) {
+      setFormData({ ...formData, image: url });
+      setMainImagePreview(url);
+      toast({ title: "تم الرفع", description: "تم رفع الصورة الرئيسية بنجاح" });
     }
+    setUploading(false);
+  };
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "خطأ", description: "حجم الصورة يجب أن يكون أقل من 5MB", variant: "destructive" });
-      return;
-    }
+  const handleMultipleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setUploading(true);
+    const newImages: ProductImage[] = [];
 
-    try {
-      // Generate unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `products/${fileName}`;
+    for (let i = 0; i < files.length; i++) {
+      const url = await uploadImage(files[i]);
+      if (url) {
+        newImages.push({
+          id: `temp-${Date.now()}-${i}`,
+          image_url: url,
+          display_order: productImages.length + i,
+        });
+      }
+    }
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, image: publicUrl });
-      setImagePreview(publicUrl);
-      toast({ title: "تم الرفع", description: "تم رفع الصورة بنجاح" });
-    } catch (error: any) {
-      toast({ title: "خطأ", description: error.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
+    setProductImages([...productImages, ...newImages]);
+    toast({ title: "تم الرفع", description: `تم رفع ${newImages.length} صورة بنجاح` });
+    setUploading(false);
+    
+    if (multiFileInputRef.current) {
+      multiFileInputRef.current.value = '';
     }
   };
 
-  const removeImage = () => {
+  const removeMainImage = () => {
     setFormData({ ...formData, image: '' });
-    setImagePreview(null);
+    setMainImagePreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const removeProductImage = async (index: number) => {
+    const image = productImages[index];
+    
+    // If it's an existing image (has a real UUID), delete from database
+    if (editingProduct && !image.id.startsWith('temp-')) {
+      await supabase
+        .from('product_images')
+        .delete()
+        .eq('id', image.id);
+    }
+    
+    setProductImages(productImages.filter((_, i) => i !== index));
   };
 
   const handleDelete = async (productId: string) => {
@@ -200,6 +262,8 @@ const AdminProducts: React.FC = () => {
       stock_count: parseInt(formData.stock_count) || 0,
     };
 
+    let productId = editingProduct?.id;
+
     if (editingProduct) {
       const { error } = await supabase
         .from('products')
@@ -208,26 +272,56 @@ const AdminProducts: React.FC = () => {
 
       if (error) {
         toast({ title: "خطأ", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "تم التحديث", description: "تم تحديث المنتج بنجاح" });
-        setIsDialogOpen(false);
-        resetForm();
-        fetchProducts();
+        setSaving(false);
+        return;
       }
     } else {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('products')
-        .insert([productData]);
+        .insert([productData])
+        .select()
+        .single();
 
       if (error) {
         toast({ title: "خطأ", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "تم الإضافة", description: "تم إضافة المنتج بنجاح" });
-        setIsDialogOpen(false);
-        resetForm();
-        fetchProducts();
+        setSaving(false);
+        return;
+      }
+      productId = data.id;
+    }
+
+    // Save additional images
+    if (productId) {
+      // Get new images (temp IDs)
+      const newImages = productImages.filter(img => img.id.startsWith('temp-'));
+      
+      if (newImages.length > 0) {
+        const imagesToInsert = newImages.map((img, index) => ({
+          product_id: productId,
+          image_url: img.image_url,
+          display_order: index,
+        }));
+
+        await supabase.from('product_images').insert(imagesToInsert);
+      }
+
+      // Update order for existing images
+      const existingImages = productImages.filter(img => !img.id.startsWith('temp-'));
+      for (let i = 0; i < existingImages.length; i++) {
+        await supabase
+          .from('product_images')
+          .update({ display_order: i })
+          .eq('id', existingImages[i].id);
       }
     }
+
+    toast({ 
+      title: editingProduct ? "تم التحديث" : "تم الإضافة", 
+      description: editingProduct ? "تم تحديث المنتج بنجاح" : "تم إضافة المنتج بنجاح" 
+    });
+    setIsDialogOpen(false);
+    resetForm();
+    fetchProducts();
     setSaving(false);
   };
 
@@ -299,20 +393,21 @@ const AdminProducts: React.FC = () => {
                 </div>
               </div>
 
+              {/* Main Image */}
               <div className="space-y-2">
-                <Label>صورة المنتج</Label>
+                <Label>الصورة الرئيسية</Label>
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
-                  onChange={handleImageUpload}
+                  onChange={handleMainImageUpload}
                   className="hidden"
                 />
                 
-                {imagePreview ? (
+                {mainImagePreview ? (
                   <div className="relative">
                     <img 
-                      src={imagePreview} 
+                      src={mainImagePreview} 
                       alt="معاينة" 
                       className="w-full h-40 object-cover rounded-lg border border-border"
                     />
@@ -321,7 +416,7 @@ const AdminProducts: React.FC = () => {
                       variant="destructive"
                       size="icon"
                       className="absolute top-2 left-2 h-8 w-8"
-                      onClick={removeImage}
+                      onClick={removeMainImage}
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -329,15 +424,14 @@ const AdminProducts: React.FC = () => {
                 ) : (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full h-40 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                    className="w-full h-32 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
                   >
                     {uploading ? (
                       <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                     ) : (
                       <>
                         <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                        <span className="text-sm text-muted-foreground">اضغط لرفع صورة</span>
-                        <span className="text-xs text-muted-foreground mt-1">أو</span>
+                        <span className="text-sm text-muted-foreground">اضغط لرفع الصورة الرئيسية</span>
                       </>
                     )}
                   </div>
@@ -349,12 +443,66 @@ const AdminProducts: React.FC = () => {
                     value={formData.image}
                     onChange={(e) => {
                       setFormData({ ...formData, image: e.target.value });
-                      setImagePreview(e.target.value || null);
+                      setMainImagePreview(e.target.value || null);
                     }}
                     placeholder="أو أدخل رابط الصورة"
                     className="text-sm"
                   />
                 </div>
+              </div>
+
+              {/* Additional Images */}
+              <div className="space-y-2">
+                <Label>صور إضافية ({productImages.length})</Label>
+                <input
+                  ref={multiFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleMultipleImagesUpload}
+                  className="hidden"
+                />
+                
+                {productImages.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    {productImages.map((img, index) => (
+                      <div key={img.id} className="relative group">
+                        <img 
+                          src={img.image_url} 
+                          alt={`صورة ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg border border-border"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 left-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeProductImage(index)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                        <span className="absolute bottom-1 right-1 bg-background/80 text-xs px-1 rounded">
+                          {index + 1}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => multiFileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4 ml-2" />
+                  )}
+                  إضافة صور
+                </Button>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
