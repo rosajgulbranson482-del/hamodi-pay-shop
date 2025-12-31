@@ -17,27 +17,70 @@ const Admin: React.FC = () => {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
 
   useEffect(() => {
+    const checkAdminRole = async (userId: string) => {
+      const { data } = await supabase.rpc('has_role', { 
+        _user_id: userId, 
+        _role: 'admin' 
+      });
+      return data === true;
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
       if (!session) {
         navigate('/auth');
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+      
+      setUser(session.user);
+      
+      setTimeout(async () => {
+        const hasAdminRole = await checkAdminRole(session.user.id);
+        if (!hasAdminRole) {
+          await supabase.auth.signOut();
+          toast({
+            title: "غير مصرح",
+            description: "ليس لديك صلاحية الوصول للوحة التحكم",
+            variant: "destructive",
+          });
+          navigate('/auth');
+        } else {
+          setIsAdmin(true);
+        }
+        setLoading(false);
+      }, 0);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         navigate('/auth');
+        setLoading(false);
+        return;
+      }
+
+      setUser(session.user);
+      const hasAdminRole = await checkAdminRole(session.user.id);
+      
+      if (!hasAdminRole) {
+        await supabase.auth.signOut();
+        toast({
+          title: "غير مصرح",
+          description: "ليس لديك صلاحية الوصول للوحة التحكم",
+          variant: "destructive",
+        });
+        navigate('/auth');
+      } else {
+        setIsAdmin(true);
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   // Subscribe to new orders
   useEffect(() => {
@@ -73,7 +116,7 @@ const Admin: React.FC = () => {
     navigate('/');
   };
 
-  if (loading) {
+  if (loading || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
