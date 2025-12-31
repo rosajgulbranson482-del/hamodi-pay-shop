@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Menu, X, Zap } from 'lucide-react';
+import { ShoppingCart, Menu, X, Zap, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 interface HeaderProps {
   onCartClick: () => void;
@@ -36,9 +37,10 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             <a href="#products" className="text-foreground hover:text-primary transition-colors font-medium">
               المنتجات
             </a>
-            <a href="#about" className="text-foreground hover:text-primary transition-colors font-medium">
-              عن المتجر
-            </a>
+            <Link to="/track" className="text-foreground hover:text-primary transition-colors font-medium flex items-center gap-1">
+              <Search className="w-4 h-4" />
+              تتبع الطلب
+            </Link>
             <a href="#contact" className="text-foreground hover:text-primary transition-colors font-medium">
               تواصل معنا
             </a>
@@ -86,13 +88,14 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             >
               المنتجات
             </a>
-            <a
-              href="#about"
-              className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium"
+            <Link
+              to="/track"
+              className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
               onClick={() => setIsMenuOpen(false)}
             >
-              عن المتجر
-            </a>
+              <Search className="w-4 h-4" />
+              تتبع الطلب
+            </Link>
             <a
               href="#contact"
               className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium"

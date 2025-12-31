@@ -9,6 +9,7 @@ import { useCart } from '@/context/CartContext';
 import { governorates } from '@/data/governorates';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -110,10 +111,43 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     setStep(2);
   };
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
+    // Save order to database
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .insert([{
+        customer_name: formData.name,
+        customer_phone: formData.phone,
+        customer_address: formData.address,
+        governorate: selectedGovernorate?.name || '',
+        delivery_fee: deliveryFee,
+        subtotal: totalPrice,
+        total: finalTotal,
+        payment_method: 'vodafone_cash',
+        notes: formData.notes || null,
+        order_number: 'temp', // Will be replaced by trigger
+      }])
+      .select()
+      .single();
+
+    if (orderError) {
+      toast({ title: "خطأ", description: orderError.message, variant: "destructive" });
+      return;
+    }
+
+    // Save order items
+    const orderItems = items.map(item => ({
+      order_id: orderData.id,
+      product_name: item.name,
+      product_price: item.price,
+      quantity: item.quantity,
+    }));
+
+    await supabase.from('order_items').insert(orderItems);
+
     toast({
       title: "تم تأكيد الطلب!",
-      description: "سنتواصل معك قريباً لتأكيد الطلب والتوصيل",
+      description: `رقم طلبك: ${orderData.order_number} - سنتواصل معك قريباً`,
     });
     clearCart();
     onClose();
