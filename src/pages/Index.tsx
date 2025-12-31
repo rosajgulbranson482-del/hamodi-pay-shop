@@ -1,13 +1,64 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React, { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
+import Header from '@/components/Header';
+import Hero from '@/components/Hero';
+import ProductGrid from '@/components/ProductGrid';
+import CartDrawer from '@/components/CartDrawer';
+import CheckoutModal from '@/components/CheckoutModal';
+import Footer from '@/components/Footer';
+import { CartProvider } from '@/context/CartContext';
 
-const Index = () => {
+const IndexContent: React.FC = () => {
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+  const handleCheckout = () => {
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <>
+      <Helmet>
+        <title>حمودي ستور | أفضل المنتجات الإلكترونية في مصر</title>
+        <meta 
+          name="description" 
+          content="حمودي ستور - متجرك الإلكتروني الموثوق لشراء أفضل المنتجات الإلكترونية بأسعار منافسة. توصيل لجميع محافظات مصر. ادفع بفودافون كاش أو انستا باي." 
+        />
+        <meta name="keywords" content="حمودي ستور, منتجات إلكترونية, مصر, فودافون كاش, انستا باي, سماعات, ساعات ذكية" />
+        <html lang="ar" dir="rtl" />
+      </Helmet>
+
+      <div className="min-h-screen flex flex-col">
+        <Header onCartClick={() => setIsCartOpen(true)} />
+        
+        <main className="flex-1">
+          <Hero />
+          <ProductGrid />
+        </main>
+
+        <Footer />
+
+        <CartDrawer
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          onCheckout={handleCheckout}
+        />
+
+        <CheckoutModal
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+        />
       </div>
-    </div>
+    </>
+  );
+};
+
+const Index: React.FC = () => {
+  return (
+    <CartProvider>
+      <IndexContent />
+    </CartProvider>
   );
 };
 
