@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Phone, MapPin, User, MessageSquare, CreditCard, Copy, Check } from 'lucide-react';
+import { X, Phone, MapPin, User, MessageSquare, CreditCard, Copy, Check, Wallet, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,26 @@ interface CheckoutModalProps {
 }
 
 const PAYMENT_NUMBER = "01025529130";
-const WHATSAPP_NUMBER = "201025529130"; // رقم واتساب المشرف بصيغة دولية
+const WHATSAPP_NUMBER = "201025529130";
+
+type PaymentMethod = 'cash_on_delivery' | 'vodafone_cash' | '';
+
+const paymentMethods = [
+  {
+    id: 'cash_on_delivery' as const,
+    name: 'الدفع عند الاستلام',
+    icon: Banknote,
+    description: 'ادفع كاش عند استلام طلبك',
+    emoji: '💵',
+  },
+  {
+    id: 'vodafone_cash' as const,
+    name: 'فودافون كاش / انستا باي',
+    icon: Wallet,
+    description: 'تحويل إلكتروني قبل الشحن',
+    emoji: '📱',
+  },
+];
 
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const { items, totalPrice, clearCart } = useCart();
@@ -25,6 +44,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   
   const [step, setStep] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -32,6 +52,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     address: '',
     notes: '',
     verificationCode: '',
+    paymentMethod: '' as PaymentMethod,
   });
   const [sentCode, setSentCode] = useState('');
   const [isVerified, setIsVerified] = useState(false);
@@ -54,7 +75,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       return;
     }
     
-    // Generate a random 4-digit code
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     setSentCode(code);
     
@@ -109,11 +129,32 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    setStep(2);
+    if (!formData.paymentMethod) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار طريقة الدفع",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If cash on delivery, submit directly. Otherwise go to payment step
+    if (formData.paymentMethod === 'cash_on_delivery') {
+      handleConfirmOrder();
+    } else {
+      setStep(2);
+    }
   };
 
-  const handleConfirmPayment = async () => {
-    // Save order to database
+  const getPaymentMethodLabel = (method: PaymentMethod) => {
+    if (method === 'cash_on_delivery') return 'الدفع عند الاستلام';
+    if (method === 'vodafone_cash') return 'فودافون كاش / انستا باي';
+    return '';
+  };
+
+  const handleConfirmOrder = async () => {
+    setSubmitting(true);
+    
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
       .insert([{
@@ -124,19 +165,19 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         delivery_fee: deliveryFee,
         subtotal: totalPrice,
         total: finalTotal,
-        payment_method: 'vodafone_cash',
+        payment_method: formData.paymentMethod,
         notes: formData.notes || null,
-        order_number: 'temp', // Will be replaced by trigger
+        order_number: 'temp',
       }])
       .select()
       .single();
 
     if (orderError) {
       toast({ title: "خطأ", description: orderError.message, variant: "destructive" });
+      setSubmitting(false);
       return;
     }
 
-    // Save order items
     const orderItems = items.map(item => ({
       order_id: orderData.id,
       product_name: item.name,
@@ -146,7 +187,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
 
     await supabase.from('order_items').insert(orderItems);
 
-    // إنشاء رسالة واتساب
     const orderItemsText = items.map(item => `• ${item.name} (${item.quantity}×)`).join('\n');
     const whatsappMessage = `🛒 *طلب جديد من حمودي ستور*
 
@@ -165,7 +205,7 @@ ${orderItemsText}
 🚚 *التوصيل:* ${deliveryFee} ج.م
 ✅ *الإجمالي:* ${finalTotal} ج.م
 
-💳 *طريقة الدفع:* فودافون كاش / انستا باي`;
+💳 *طريقة الدفع:* ${getPaymentMethodLabel(formData.paymentMethod)}`;
 
     const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`;
     
@@ -174,7 +214,6 @@ ${orderItemsText}
       description: `رقم طلبك: ${orderData.order_number} - جاري فتح واتساب...`,
     });
     
-    // فتح واتساب في نافذة جديدة
     window.open(whatsappUrl, '_blank');
     
     clearCart();
@@ -187,27 +226,26 @@ ${orderItemsText}
       address: '',
       notes: '',
       verificationCode: '',
+      paymentMethod: '',
     });
     setIsVerified(false);
     setSentCode('');
+    setSubmitting(false);
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Overlay */}
       <div
         className="absolute inset-0 bg-foreground/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-card rounded-2xl shadow-xl">
-        {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between p-4 border-b border-border bg-card rounded-t-2xl">
+        <div className="sticky top-0 flex items-center justify-between p-4 border-b border-border bg-card rounded-t-2xl z-10">
           <h2 className="text-xl font-bold text-foreground">
-            {step === 1 ? 'إتمام الطلب' : 'الدفع'}
+            {step === 1 ? 'إتمام الطلب' : 'الدفع الإلكتروني'}
           </h2>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5" />
@@ -310,6 +348,52 @@ ${orderItemsText}
                 />
               </div>
 
+              {/* Payment Method Selection */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-primary" />
+                  طريقة الدفع <span className="text-destructive">*</span>
+                </Label>
+                <div className="grid grid-cols-1 gap-3">
+                  {paymentMethods.map((method) => (
+                    <button
+                      key={method.id}
+                      type="button"
+                      onClick={() => handleInputChange('paymentMethod', method.id)}
+                      className={cn(
+                        "flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-right",
+                        formData.paymentMethod === method.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50 hover:bg-muted/50"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-12 h-12 rounded-full flex items-center justify-center text-2xl",
+                        formData.paymentMethod === method.id
+                          ? "bg-primary/10"
+                          : "bg-muted"
+                      )}>
+                        {method.emoji}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-foreground">{method.name}</div>
+                        <div className="text-sm text-muted-foreground">{method.description}</div>
+                      </div>
+                      <div className={cn(
+                        "w-6 h-6 rounded-full border-2 flex items-center justify-center",
+                        formData.paymentMethod === method.id
+                          ? "border-primary bg-primary"
+                          : "border-muted-foreground/30"
+                      )}>
+                        {formData.paymentMethod === method.id && (
+                          <Check className="w-4 h-4 text-primary-foreground" />
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Notes */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
@@ -347,8 +431,9 @@ ${orderItemsText}
                 size="lg"
                 className="w-full"
                 onClick={handleSubmitOrder}
+                disabled={submitting}
               >
-                متابعة للدفع
+                {submitting ? 'جاري التأكيد...' : formData.paymentMethod === 'cash_on_delivery' ? 'تأكيد الطلب' : 'متابعة للدفع'}
               </Button>
             </div>
           ) : (
@@ -359,10 +444,10 @@ ${orderItemsText}
                   <CreditCard className="w-8 h-8 text-primary-foreground" />
                 </div>
                 <h3 className="text-lg font-bold text-foreground mb-2">
-                  طرق الدفع المتاحة
+                  الدفع الإلكتروني
                 </h3>
                 <p className="text-muted-foreground text-sm">
-                  يرجى تحويل المبلغ على أحد الأرقام التالية
+                  يرجى تحويل المبلغ على الرقم التالي
                 </p>
               </div>
 
@@ -381,7 +466,7 @@ ${orderItemsText}
                       className="h-8 w-8"
                     >
                       {copied ? (
-                        <Check className="w-4 h-4 text-success" />
+                        <Check className="w-4 h-4 text-green-600" />
                       ) : (
                         <Copy className="w-4 h-4" />
                       )}
@@ -431,9 +516,10 @@ ${orderItemsText}
                   variant="default"
                   size="lg"
                   className="flex-1"
-                  onClick={handleConfirmPayment}
+                  onClick={handleConfirmOrder}
+                  disabled={submitting}
                 >
-                  تأكيد الطلب
+                  {submitting ? 'جاري التأكيد...' : 'تأكيد الطلب'}
                 </Button>
               </div>
             </div>
