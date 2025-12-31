@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Phone, MapPin, User, MessageSquare, CreditCard, Copy, Check, Wallet, Banknote } from 'lucide-react';
+import { X, Phone, MapPin, User, MessageSquare, CreditCard, Copy, Check, Wallet, Banknote, Ticket, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,13 @@ import { supabase } from '@/integrations/supabase/client';
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface AppliedCoupon {
+  code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  discount_amount: number;
 }
 
 const PAYMENT_NUMBER = "01025529130";
@@ -56,13 +63,95 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   });
   const [sentCode, setSentCode] = useState('');
   const [isVerified, setIsVerified] = useState(false);
+  
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   const selectedGovernorate = governorates.find(g => g.id === formData.governorate);
   const deliveryFee = selectedGovernorate?.deliveryFee || 0;
-  const finalTotal = totalPrice + deliveryFee;
+  const discountAmount = appliedCoupon?.discount_amount || 0;
+  const finalTotal = Math.max(0, totalPrice + deliveryFee - discountAmount);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast({ title: "خطأ", description: "يرجى إدخال كود الكوبون", variant: "destructive" });
+      return;
+    }
+
+    setApplyingCoupon(true);
+
+    const { data: coupon, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('code', couponCode.toUpperCase())
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error || !coupon) {
+      toast({ title: "خطأ", description: "كود الكوبون غير صالح", variant: "destructive" });
+      setApplyingCoupon(false);
+      return;
+    }
+
+    // Check expiry
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+      toast({ title: "خطأ", description: "انتهت صلاحية هذا الكوبون", variant: "destructive" });
+      setApplyingCoupon(false);
+      return;
+    }
+
+    // Check max uses
+    if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
+      toast({ title: "خطأ", description: "تم استنفاد عدد استخدامات هذا الكوبون", variant: "destructive" });
+      setApplyingCoupon(false);
+      return;
+    }
+
+    // Check minimum order
+    if (coupon.min_order_amount && totalPrice < coupon.min_order_amount) {
+      toast({ 
+        title: "خطأ", 
+        description: `الحد الأدنى للطلب ${coupon.min_order_amount} ج.م لاستخدام هذا الكوبون`, 
+        variant: "destructive" 
+      });
+      setApplyingCoupon(false);
+      return;
+    }
+
+    // Calculate discount
+    let discount = 0;
+    if (coupon.discount_type === 'percentage') {
+      discount = (totalPrice * coupon.discount_value) / 100;
+    } else {
+      discount = coupon.discount_value;
+    }
+
+    // Don't let discount exceed total
+    discount = Math.min(discount, totalPrice);
+
+    setAppliedCoupon({
+      code: coupon.code,
+      discount_type: coupon.discount_type as 'percentage' | 'fixed',
+      discount_value: coupon.discount_value,
+      discount_amount: discount,
+    });
+
+    toast({ 
+      title: "تم تطبيق الكوبون! 🎉", 
+      description: `تم خصم ${discount} ج.م من طلبك` 
+    });
+    setApplyingCoupon(false);
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
   };
 
   const sendVerificationCode = () => {
@@ -138,7 +227,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    // If cash on delivery, submit directly. Otherwise go to payment step
     if (formData.paymentMethod === 'cash_on_delivery') {
       handleConfirmOrder();
     } else {
@@ -168,6 +256,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         payment_method: formData.paymentMethod,
         notes: formData.notes || null,
         order_number: 'temp',
+        coupon_code: appliedCoupon?.code || null,
+        discount_amount: discountAmount,
       }])
       .select()
       .single();
@@ -176,6 +266,22 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       toast({ title: "خطأ", description: orderError.message, variant: "destructive" });
       setSubmitting(false);
       return;
+    }
+
+    // Update coupon usage count
+    if (appliedCoupon) {
+      const { data: couponData } = await supabase
+        .from('coupons')
+        .select('used_count')
+        .eq('code', appliedCoupon.code)
+        .single();
+      
+      if (couponData) {
+        await supabase
+          .from('coupons')
+          .update({ used_count: (couponData.used_count || 0) + 1 })
+          .eq('code', appliedCoupon.code);
+      }
     }
 
     const orderItems = items.map(item => ({
@@ -188,6 +294,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     await supabase.from('order_items').insert(orderItems);
 
     const orderItemsText = items.map(item => `• ${item.name} (${item.quantity}×)`).join('\n');
+    const discountText = appliedCoupon 
+      ? `\n🏷️ *الكوبون:* ${appliedCoupon.code} (-${discountAmount} ج.م)`
+      : '';
+    
     const whatsappMessage = `🛒 *طلب جديد من حمودي ستور*
 
 📦 *رقم الطلب:* ${orderData.order_number}
@@ -202,7 +312,7 @@ ${formData.notes ? `📝 *ملاحظات:* ${formData.notes}` : ''}
 ${orderItemsText}
 
 💰 *المنتجات:* ${totalPrice} ج.م
-🚚 *التوصيل:* ${deliveryFee} ج.م
+🚚 *التوصيل:* ${deliveryFee} ج.م${discountText}
 ✅ *الإجمالي:* ${finalTotal} ج.م
 
 💳 *طريقة الدفع:* ${getPaymentMethodLabel(formData.paymentMethod)}`;
@@ -230,6 +340,8 @@ ${orderItemsText}
     });
     setIsVerified(false);
     setSentCode('');
+    setAppliedCoupon(null);
+    setCouponCode('');
     setSubmitting(false);
   };
 
@@ -394,6 +506,46 @@ ${orderItemsText}
                 </div>
               </div>
 
+              {/* Coupon Code */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-primary" />
+                  كود الخصم (اختياري)
+                </Label>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-5 h-5 text-green-600" />
+                      <div>
+                        <span className="font-bold text-green-700">{appliedCoupon.code}</span>
+                        <span className="text-sm text-green-600 mr-2">
+                          (-{appliedCoupon.discount_amount} ج.م)
+                        </span>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={removeCoupon} className="text-destructive">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="أدخل كود الخصم"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      className="flex-1"
+                    />
+                    <Button 
+                      variant="secondary" 
+                      onClick={applyCoupon}
+                      disabled={applyingCoupon}
+                    >
+                      {applyingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تطبيق'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               {/* Notes */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
@@ -420,6 +572,12 @@ ${orderItemsText}
                   </span>
                   <span>{deliveryFee} ج.م</span>
                 </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>الخصم ({appliedCoupon.code})</span>
+                    <span>-{discountAmount} ج.م</span>
+                  </div>
+                )}
                 <div className="border-t border-border pt-2 flex justify-between font-bold">
                   <span>الإجمالي</span>
                   <span className="text-primary text-lg">{finalTotal} ج.م</span>
@@ -490,6 +648,11 @@ ${orderItemsText}
               <div className="p-4 gradient-primary rounded-xl text-center text-primary-foreground">
                 <span className="text-sm opacity-80">المبلغ المطلوب تحويله</span>
                 <div className="text-3xl font-bold mt-1">{finalTotal} ج.م</div>
+                {appliedCoupon && (
+                  <div className="text-sm opacity-80 mt-1">
+                    (بعد خصم {discountAmount} ج.م)
+                  </div>
+                )}
               </div>
 
               {/* Instructions */}
