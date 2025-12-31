@@ -11,54 +11,80 @@ import { Zap, Mail, Lock, Loader2 } from 'lucide-react';
 const Auth: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   useEffect(() => {
+    const checkAdminRole = async (userId: string) => {
+      const { data } = await supabase.rpc('has_role', { 
+        _user_id: userId, 
+        _role: 'admin' 
+      });
+      return data === true;
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate('/admin');
+      if (session?.user) {
+        setTimeout(async () => {
+          const isAdmin = await checkAdminRole(session.user.id);
+          if (isAdmin) {
+            navigate('/admin');
+          } else {
+            await supabase.auth.signOut();
+            toast({
+              title: "غير مصرح",
+              description: "ليس لديك صلاحية الوصول للوحة التحكم",
+              variant: "destructive",
+            });
+          }
+          setCheckingAuth(false);
+        }, 0);
+      } else {
+        setCheckingAuth(false);
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate('/admin');
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const isAdmin = await checkAdminRole(session.user.id);
+        if (isAdmin) {
+          navigate('/admin');
+        } else {
+          await supabase.auth.signOut();
+        }
       }
+      setCheckingAuth(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-        toast({ title: "تم تسجيل الدخول بنجاح" });
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/admin`,
-          },
-        });
-        if (error) throw error;
-        toast({ 
-          title: "تم إنشاء الحساب",
-          description: "يمكنك الآن تسجيل الدخول"
-        });
-        setIsLogin(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+
+      // Check if user has admin role
+      const { data: isAdmin } = await supabase.rpc('has_role', { 
+        _user_id: data.user.id, 
+        _role: 'admin' 
+      });
+
+      if (!isAdmin) {
+        await supabase.auth.signOut();
+        throw new Error("ليس لديك صلاحية الوصول للوحة التحكم");
       }
+
+      toast({ title: "تم تسجيل الدخول بنجاح" });
     } catch (error: any) {
       toast({
         title: "خطأ",
@@ -71,6 +97,14 @@ const Auth: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4" dir="rtl">
@@ -92,30 +126,11 @@ const Auth: React.FC = () => {
             لوحة تحكم حمودي <span className="text-gradient">ستور</span>
           </h1>
           <p className="text-muted-foreground mt-2">
-            {isLogin ? 'تسجيل الدخول للمشرفين' : 'إنشاء حساب جديد'}
+            تسجيل الدخول للمشرفين
           </p>
         </div>
 
         <div className="bg-card rounded-2xl p-6 shadow-lg border border-border space-y-4">
-          <div className="grid grid-cols-2 bg-muted rounded-xl p-1">
-            <Button
-              type="button"
-              variant={isLogin ? 'default' : 'ghost'}
-              className="w-full"
-              onClick={() => setIsLogin(true)}
-            >
-              تسجيل الدخول
-            </Button>
-            <Button
-              type="button"
-              variant={!isLogin ? 'default' : 'ghost'}
-              className="w-full"
-              onClick={() => setIsLogin(false)}
-            >
-              إنشاء حساب
-            </Button>
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
@@ -148,7 +163,7 @@ const Auth: React.FC = () => {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-              {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'}
+              تسجيل الدخول
             </Button>
           </form>
         </div>
