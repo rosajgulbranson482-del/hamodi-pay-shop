@@ -6,9 +6,10 @@ import { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Zap, LogOut, Package, ShoppingBag, Bell, Loader2 } from 'lucide-react';
+import { Zap, LogOut, Package, ShoppingBag, Bell, Loader2, Ticket } from 'lucide-react';
 import AdminOrders from '@/components/admin/AdminOrders';
 import AdminProducts from '@/components/admin/AdminProducts';
+import AdminCoupons from '@/components/admin/AdminCoupons';
 import { Badge } from '@/components/ui/badge';
 
 const Admin: React.FC = () => {
@@ -125,7 +126,7 @@ const Admin: React.FC = () => {
       {/* Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="orders" className="space-y-6" onValueChange={() => setNewOrdersCount(0)}>
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
             <TabsTrigger value="orders" className="relative">
               <ShoppingBag className="w-4 h-4 ml-2" />
               الطلبات
@@ -139,6 +140,10 @@ const Admin: React.FC = () => {
               <Package className="w-4 h-4 ml-2" />
               المنتجات
             </TabsTrigger>
+            <TabsTrigger value="coupons">
+              <Ticket className="w-4 h-4 ml-2" />
+              الكوبونات
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders">
@@ -147,6 +152,10 @@ const Admin: React.FC = () => {
 
           <TabsContent value="products">
             <AdminProducts />
+          </TabsContent>
+
+          <TabsContent value="coupons">
+            <AdminCoupons />
           </TabsContent>
         </Tabs>
       </main>

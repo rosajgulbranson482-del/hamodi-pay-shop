@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          min_order_amount: number | null
+          updated_at: string
+          used_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_type: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_order_amount?: number | null
+          updated_at?: string
+          used_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_order_amount?: number | null
+          updated_at?: string
+          used_count?: number
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -61,11 +103,13 @@ export type Database = {
       }
       orders: {
         Row: {
+          coupon_code: string | null
           created_at: string
           customer_address: string
           customer_name: string
           customer_phone: string
           delivery_fee: number
+          discount_amount: number | null
           governorate: string
           id: string
           notes: string | null
@@ -78,11 +122,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          coupon_code?: string | null
           created_at?: string
           customer_address: string
           customer_name: string
           customer_phone: string
           delivery_fee: number
+          discount_amount?: number | null
           governorate: string
           id?: string
           notes?: string | null
@@ -95,11 +141,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          coupon_code?: string | null
           created_at?: string
           customer_address?: string
           customer_name?: string
           customer_phone?: string
           delivery_fee?: number
+          discount_amount?: number | null
           governorate?: string
           id?: string
           notes?: string | null
