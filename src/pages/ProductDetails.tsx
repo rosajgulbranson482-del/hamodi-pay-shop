@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useCart } from '@/context/CartContext';
+import { CartProvider, useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,7 +44,7 @@ interface Product {
   stock_count: number | null;
 }
 
-const ProductDetails = () => {
+const ProductDetailsContent = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart, items } = useCart();
@@ -472,6 +472,14 @@ const ProductDetails = () => {
       
       <Footer />
     </div>
+  );
+};
+
+const ProductDetails = () => {
+  return (
+    <CartProvider>
+      <ProductDetailsContent />
+    </CartProvider>
   );
 };
 
