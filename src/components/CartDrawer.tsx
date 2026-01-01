@@ -28,8 +28,8 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
       {/* Overlay */}
       <div
         className={cn(
-          "fixed inset-0 bg-foreground/50 backdrop-blur-sm z-50 transition-opacity duration-300",
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          "fixed inset-0 bg-foreground/50 backdrop-blur-sm transition-opacity duration-300",
+          isOpen ? "opacity-100 z-[60]" : "opacity-0 pointer-events-none -z-10"
         )}
         onClick={onClose}
       />
@@ -37,8 +37,8 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
       {/* Drawer */}
       <div
         className={cn(
-          "fixed top-0 left-0 h-full w-full sm:max-w-md bg-card shadow-xl z-50 transition-transform duration-300 flex flex-col",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed top-0 left-0 h-full w-full sm:max-w-md bg-card shadow-xl transition-transform duration-300 flex flex-col",
+          isOpen ? "translate-x-0 z-[70]" : "-translate-x-full z-[70]"
         )}
       >
         {/* Header */}
