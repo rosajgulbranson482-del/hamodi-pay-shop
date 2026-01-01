@@ -19,9 +19,9 @@ import {
   DialogTitle,
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard, Download } from 'lucide-react';
+import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard, Download, Filter, X, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, isWithinInterval } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -89,9 +89,63 @@ const AdminOrders: React.FC = () => {
   const [loadingItems, setLoadingItems] = useState(false);
   const [emailInputs, setEmailInputs] = useState<Record<string, string>>({});
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('all');
+  const [customDateFrom, setCustomDateFrom] = useState<string>('');
+  const [customDateTo, setCustomDateTo] = useState<string>('');
+
+  // Filter orders
+  const filteredOrders = orders.filter(order => {
+    // Status filter
+    if (statusFilter !== 'all' && order.status !== statusFilter) {
+      return false;
+    }
+    
+    // Date filter
+    if (dateFilter !== 'all') {
+      const orderDate = new Date(order.created_at);
+      const today = new Date();
+      
+      switch (dateFilter) {
+        case 'today':
+          if (orderDate < startOfDay(today) || orderDate > endOfDay(today)) return false;
+          break;
+        case 'yesterday':
+          const yesterday = subDays(today, 1);
+          if (orderDate < startOfDay(yesterday) || orderDate > endOfDay(yesterday)) return false;
+          break;
+        case 'week':
+          if (orderDate < startOfDay(subDays(today, 7))) return false;
+          break;
+        case 'month':
+          if (orderDate < startOfDay(subDays(today, 30))) return false;
+          break;
+        case 'custom':
+          if (customDateFrom && customDateTo) {
+            const from = startOfDay(new Date(customDateFrom));
+            const to = endOfDay(new Date(customDateTo));
+            if (!isWithinInterval(orderDate, { start: from, end: to })) return false;
+          }
+          break;
+      }
+    }
+    
+    return true;
+  });
+
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setDateFilter('all');
+    setCustomDateFrom('');
+    setCustomDateTo('');
+  };
+
+  const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all';
 
   const exportToExcel = () => {
-    const exportData = orders.map(order => ({
+    const exportData = filteredOrders.map(order => ({
       'رقم الطلب': order.order_number,
       'اسم العميل': order.customer_name,
       'رقم الهاتف': order.customer_phone,
@@ -124,7 +178,7 @@ const AdminOrders: React.FC = () => {
 
     toast({
       title: 'تم التصدير بنجاح',
-      description: `تم تصدير ${orders.length} طلب إلى ملف Excel`,
+      description: `تم تصدير ${filteredOrders.length} طلب إلى ملف Excel`,
     });
   };
 
@@ -322,7 +376,7 @@ ${statusMessage}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-bold">إدارة الطلبات</h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={exportToExcel} disabled={orders.length === 0}>
+          <Button variant="outline" size="sm" onClick={exportToExcel} disabled={filteredOrders.length === 0}>
             <Download className="w-4 h-4 ml-2" />
             تصدير Excel
           </Button>
@@ -333,9 +387,78 @@ ${statusMessage}
         </div>
       </div>
 
-      {orders.length === 0 ? (
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 p-4 bg-muted/50 rounded-xl border border-border">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium">فلترة:</span>
+        </div>
+        
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[140px] h-9">
+            <SelectValue placeholder="الحالة" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">كل الحالات</SelectItem>
+            <SelectItem value="pending">قيد الانتظار</SelectItem>
+            <SelectItem value="confirmed">تم التأكيد</SelectItem>
+            <SelectItem value="processing">جاري التجهيز</SelectItem>
+            <SelectItem value="shipped">تم الشحن</SelectItem>
+            <SelectItem value="delivered">تم التوصيل</SelectItem>
+            <SelectItem value="cancelled">ملغي</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={dateFilter} onValueChange={setDateFilter}>
+          <SelectTrigger className="w-[140px] h-9">
+            <SelectValue placeholder="التاريخ" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">كل الأوقات</SelectItem>
+            <SelectItem value="today">اليوم</SelectItem>
+            <SelectItem value="yesterday">أمس</SelectItem>
+            <SelectItem value="week">آخر أسبوع</SelectItem>
+            <SelectItem value="month">آخر شهر</SelectItem>
+            <SelectItem value="custom">تحديد فترة</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {dateFilter === 'custom' && (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={customDateFrom}
+                onChange={(e) => setCustomDateFrom(e.target.value)}
+                className="h-9 w-[130px]"
+              />
+            </div>
+            <span className="text-muted-foreground">إلى</span>
+            <Input
+              type="date"
+              value={customDateTo}
+              onChange={(e) => setCustomDateTo(e.target.value)}
+              className="h-9 w-[130px]"
+            />
+          </div>
+        )}
+
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
+            <X className="w-4 h-4 ml-1" />
+            مسح الفلاتر
+          </Button>
+        )}
+
+        <div className="mr-auto text-sm text-muted-foreground">
+          عرض {filteredOrders.length} من {orders.length} طلب
+        </div>
+      </div>
+
+      {filteredOrders.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          لا توجد طلبات بعد
+          {orders.length === 0 ? 'لا توجد طلبات بعد' : 'لا توجد طلبات تطابق الفلاتر المحددة'}
         </div>
       ) : (
         <div className="rounded-xl border border-border overflow-hidden">
@@ -354,7 +477,7 @@ ${statusMessage}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => (
+              {filteredOrders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-mono font-medium">
                     {order.order_number}
