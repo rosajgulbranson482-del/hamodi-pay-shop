@@ -170,65 +170,63 @@ const TrackOrder: React.FC = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-14 md:h-16">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center">
-                <Zap className="w-5 h-5 text-primary-foreground" />
+              <div className="w-8 h-8 md:w-10 md:h-10 gradient-primary rounded-xl flex items-center justify-center">
+                <Zap className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
               </div>
-              <h1 className="text-lg font-bold">
+              <h1 className="text-base md:text-lg font-bold">
                 حمودي <span className="text-gradient">ستور</span>
               </h1>
             </Link>
             <Link to="/">
-              <Button variant="outline" size="sm">
-                <ArrowRight className="w-4 h-4 ml-2" />
-                العودة للمتجر
+              <Button variant="outline" size="sm" className="h-8 md:h-9 text-xs md:text-sm">
+                <ArrowRight className="w-4 h-4 md:ml-2" />
+                <span className="hidden sm:inline">العودة للمتجر</span>
               </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 md:py-8">
         <div className="max-w-2xl mx-auto">
           {/* Search Section */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">تتبع طلبك</h1>
-            <p className="text-muted-foreground">
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">تتبع طلبك</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               أدخل رقم الطلب وآخر 4 أرقام من رقم الهاتف للتحقق
             </p>
           </div>
 
-          <form onSubmit={handleSearch} className="space-y-4 mb-8">
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Package className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="رقم الطلب (مثال: HS-20260101-1234)..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-10"
-                />
-              </div>
+          <form onSubmit={handleSearch} className="space-y-3 md:space-y-4 mb-6 md:mb-8">
+            <div className="relative">
+              <Package className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="رقم الطلب (مثال: HS-20260101-1234)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pr-10 text-sm md:text-base"
+              />
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 md:gap-3">
               <div className="relative flex-1">
                 <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="آخر 4 أرقام من رقم الهاتف..."
+                  placeholder="آخر 4 أرقام من الهاتف..."
                   value={phoneLast4}
                   onChange={(e) => setPhoneLast4(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  className="pr-10"
+                  className="pr-10 text-sm md:text-base"
                   maxLength={4}
                   inputMode="numeric"
                   pattern="\d{4}"
                 />
               </div>
-              <Button type="submit" disabled={loading || !searchQuery.trim() || phoneLast4.length !== 4}>
+              <Button type="submit" disabled={loading || !searchQuery.trim() || phoneLast4.length !== 4} className="px-4 md:px-6">
                 {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
                 ) : (
-                  <Search className="w-5 h-5" />
+                  <Search className="w-4 h-4 md:w-5 md:h-5" />
                 )}
               </Button>
             </div>
@@ -236,31 +234,31 @@ const TrackOrder: React.FC = () => {
 
           {/* Order Details */}
           {order && (
-            <div className="space-y-6 animate-fade-in">
+            <div className="space-y-4 md:space-y-6 animate-fade-in">
               {/* Order Header */}
-              <div className="bg-card rounded-2xl border border-border p-6">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-card rounded-xl md:rounded-2xl border border-border p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 md:mb-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">رقم الطلب</p>
-                    <p className="text-xl font-bold font-mono">{order.order_number}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">رقم الطلب</p>
+                    <p className="text-lg md:text-xl font-bold font-mono">{order.order_number}</p>
                   </div>
-                  <Badge className={`${statusConfig[order.status].color} text-white px-3 py-1`}>
+                  <Badge className={`${statusConfig[order.status].color} text-white px-2 md:px-3 py-1 self-start sm:self-auto`}>
                     {statusConfig[order.status].icon}
-                    <span className="mr-2">{statusConfig[order.status].label}</span>
+                    <span className="mr-1 md:mr-2 text-xs md:text-sm">{statusConfig[order.status].label}</span>
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">
                   تم الطلب في {format(new Date(order.created_at), 'dd MMMM yyyy - hh:mm a', { locale: ar })}
                 </p>
               </div>
 
               {/* Status Timeline */}
               {order.status !== 'cancelled' && (
-                <div className="bg-card rounded-2xl border border-border p-6">
-                  <h3 className="font-bold mb-6">حالة الطلب</h3>
+                <div className="bg-card rounded-xl md:rounded-2xl border border-border p-4 md:p-6">
+                  <h3 className="font-bold mb-4 md:mb-6 text-sm md:text-base">حالة الطلب</h3>
                   <div className="relative">
                     {/* Progress Line */}
-                    <div className="absolute top-5 right-5 left-5 h-1 bg-muted rounded-full">
+                    <div className="absolute top-4 md:top-5 right-4 md:right-5 left-4 md:left-5 h-0.5 md:h-1 bg-muted rounded-full">
                       <div 
                         className="h-full bg-primary rounded-full transition-all duration-500"
                         style={{ width: `${(currentStepIndex / (statusSteps.length - 1)) * 100}%` }}
@@ -275,15 +273,17 @@ const TrackOrder: React.FC = () => {
                         return (
                           <div key={status} className="flex flex-col items-center">
                             <div 
-                              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                              className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all ${
                                 isCompleted 
                                   ? 'bg-primary text-primary-foreground' 
                                   : 'bg-muted text-muted-foreground'
-                              } ${isCurrent ? 'ring-4 ring-primary/30' : ''}`}
+                              } ${isCurrent ? 'ring-2 md:ring-4 ring-primary/30' : ''}`}
                             >
-                              {statusConfig[status].icon}
+                              <span className="[&>svg]:w-4 [&>svg]:h-4 md:[&>svg]:w-5 md:[&>svg]:h-5">
+                                {statusConfig[status].icon}
+                              </span>
                             </div>
-                            <span className={`text-xs mt-2 text-center ${isCompleted ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                            <span className={`text-[10px] md:text-xs mt-1 md:mt-2 text-center max-w-[50px] md:max-w-none ${isCompleted ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                               {statusConfig[status].label}
                             </span>
                           </div>
@@ -295,45 +295,45 @@ const TrackOrder: React.FC = () => {
               )}
 
               {/* Delivery Info */}
-              <div className="bg-card rounded-xl border border-border p-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <div className="bg-card rounded-xl border border-border p-3 md:p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1 md:mb-2">
                   <MapPin className="w-4 h-4" />
-                  <span className="text-sm">التوصيل إلى</span>
+                  <span className="text-xs md:text-sm">التوصيل إلى</span>
                 </div>
-                <p className="font-medium">{order.governorate}</p>
+                <p className="font-medium text-sm md:text-base">{order.governorate}</p>
               </div>
 
               {/* Order Items */}
-              <div className="bg-card rounded-2xl border border-border p-6">
-                <h3 className="font-bold mb-4">المنتجات</h3>
-                <div className="space-y-3">
+              <div className="bg-card rounded-xl md:rounded-2xl border border-border p-4 md:p-6">
+                <h3 className="font-bold mb-3 md:mb-4 text-sm md:text-base">المنتجات</h3>
+                <div className="space-y-2 md:space-y-3">
                   {order.items.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <div key={item.id} className="flex justify-between items-center p-2.5 md:p-3 bg-muted rounded-lg">
                       <div>
-                        <p className="font-medium">{item.product_name}</p>
-                        <p className="text-sm text-muted-foreground">الكمية: {item.quantity}</p>
+                        <p className="font-medium text-sm md:text-base">{item.product_name}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground">الكمية: {item.quantity}</p>
                       </div>
-                      <span className="font-bold">{item.product_price * item.quantity} ج.م</span>
+                      <span className="font-bold text-sm md:text-base">{item.product_price * item.quantity} ج.م</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="border-t border-border mt-4 pt-4 space-y-2">
-                  <div className="flex justify-between text-sm">
+                <div className="border-t border-border mt-3 md:mt-4 pt-3 md:pt-4 space-y-1.5 md:space-y-2">
+                  <div className="flex justify-between text-xs md:text-sm">
                     <span className="text-muted-foreground">المنتجات</span>
                     <span>{order.subtotal} ج.م</span>
                   </div>
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs md:text-sm">
                     <span className="text-muted-foreground">التوصيل</span>
                     <span>{order.delivery_fee} ج.م</span>
                   </div>
                   {order.discount_amount && order.discount_amount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
+                    <div className="flex justify-between text-xs md:text-sm text-green-600">
                       <span>الخصم</span>
                       <span>-{order.discount_amount} ج.م</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-lg font-bold pt-2">
+                  <div className="flex justify-between text-base md:text-lg font-bold pt-2">
                     <span>الإجمالي</span>
                     <span className="text-primary">{order.total} ج.م</span>
                   </div>
@@ -341,22 +341,22 @@ const TrackOrder: React.FC = () => {
               </div>
 
               {/* Payment Status */}
-              <div className={`rounded-xl p-4 ${order.payment_confirmed ? 'bg-green-500/10 border border-green-500/30' : 'bg-yellow-500/10 border border-yellow-500/30'}`}>
-                <div className="flex items-center gap-3">
+              <div className={`rounded-xl p-3 md:p-4 ${order.payment_confirmed ? 'bg-green-500/10 border border-green-500/30' : 'bg-yellow-500/10 border border-yellow-500/30'}`}>
+                <div className="flex items-center gap-2 md:gap-3">
                   {order.payment_confirmed ? (
                     <>
-                      <CheckCircle className="w-6 h-6 text-green-600" />
+                      <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-green-600 flex-shrink-0" />
                       <div>
-                        <p className="font-medium text-green-700">تم تأكيد الدفع</p>
-                        <p className="text-sm text-green-600">شكراً لك! سيتم شحن طلبك قريباً</p>
+                        <p className="font-medium text-green-700 text-sm md:text-base">تم تأكيد الدفع</p>
+                        <p className="text-xs md:text-sm text-green-600">شكراً لك! سيتم شحن طلبك قريباً</p>
                       </div>
                     </>
                   ) : (
                     <>
-                      <Clock className="w-6 h-6 text-yellow-600" />
+                      <Clock className="w-5 h-5 md:w-6 md:h-6 text-yellow-600 flex-shrink-0" />
                       <div>
-                        <p className="font-medium text-yellow-700">في انتظار تأكيد الدفع</p>
-                        <p className="text-sm text-yellow-600">
+                        <p className="font-medium text-yellow-700 text-sm md:text-base">في انتظار تأكيد الدفع</p>
+                        <p className="text-xs md:text-sm text-yellow-600">
                           {order.payment_method === 'cod' 
                             ? 'الدفع عند الاستلام' 
                             : 'يرجى التحويل على الرقم المحدد وانتظار التأكيد'}

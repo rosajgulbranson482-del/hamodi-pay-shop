@@ -187,11 +187,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
         )}
 
-        {/* Quick Add Button */}
-        <div className="absolute inset-x-3 bottom-3 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+        {/* Quick Add Button - Always visible on mobile, hover on desktop */}
+        <div className="absolute inset-x-3 bottom-3 opacity-100 md:opacity-0 translate-y-0 md:translate-y-4 md:group-hover:opacity-100 md:group-hover:translate-y-0 transition-all duration-300">
           <Button
             variant={isInCart ? "success" : "default"}
-            className="w-full"
+            className="w-full text-sm md:text-base"
+            size="sm"
             onClick={handleAddToCart}
             disabled={!inStock}
           >
@@ -211,29 +212,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       </Link>
 
       {/* Content */}
-      <div className="p-4">
-        <span className="text-xs font-medium text-primary bg-accent px-2 py-1 rounded-full">
+      <div className="p-3 md:p-4">
+        <span className="text-[10px] md:text-xs font-medium text-primary bg-accent px-2 py-0.5 md:py-1 rounded-full">
           {product.category}
         </span>
         
-        <h3 className="text-lg font-bold text-foreground mt-2 mb-1 line-clamp-1">
+        <h3 className="text-sm md:text-lg font-bold text-foreground mt-2 mb-1 line-clamp-2 md:line-clamp-1">
           {product.name}
         </h3>
         
         {product.description && (
-          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+          <p className="text-xs md:text-sm text-muted-foreground mb-2 md:mb-3 line-clamp-2 hidden md:block">
             {product.description}
           </p>
         )}
 
         {/* Price */}
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-primary">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-2 md:mt-3 gap-1">
+          <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+            <span className="text-base md:text-xl font-bold text-primary">
               {product.price} ج.م
             </span>
             {product.original_price && (
-              <span className="text-sm text-muted-foreground line-through">
+              <span className="text-xs md:text-sm text-muted-foreground line-through">
                 {product.original_price} ج.م
               </span>
             )}

@@ -149,20 +149,20 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
         <nav
           className={cn(
             "md:hidden overflow-hidden transition-all duration-300",
-            isMenuOpen ? "max-h-48 pb-4" : "max-h-0"
+            isMenuOpen ? "max-h-[400px] pb-4" : "max-h-0"
           )}
         >
-          <div className="flex flex-col gap-2 pt-2">
+          <div className="flex flex-col gap-1 pt-2">
             <a
               href="#products"
-              className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium"
+              className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium text-sm"
               onClick={() => setIsMenuOpen(false)}
             >
               المنتجات
             </a>
             <Link
               to="/track"
-              className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
+              className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2 text-sm"
               onClick={() => setIsMenuOpen(false)}
             >
               <Search className="w-4 h-4" />
@@ -172,7 +172,7 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
               <>
                 <Link
                   to="/favorites"
-                  className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
+                  className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2 text-sm"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <Heart className="w-4 h-4" />
@@ -185,7 +185,7 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                 </Link>
                 <Link
                   to="/my-orders"
-                  className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
+                  className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2 text-sm"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <Package className="w-4 h-4" />
@@ -193,14 +193,14 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                 </Link>
                 <Link
                   to="/account"
-                  className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
+                  className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2 text-sm"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <Settings className="w-4 h-4" />
                   إعدادات الحساب
                 </Link>
                 <button
-                  className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium text-destructive flex items-center gap-2 text-right w-full"
+                  className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium text-destructive flex items-center gap-2 text-right w-full text-sm"
                   onClick={() => { signOut(); setIsMenuOpen(false); }}
                 >
                   <LogOut className="w-4 h-4" />
@@ -210,7 +210,7 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             ) : (
               <Link
                 to="/login"
-                className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
+                className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2 text-sm"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <User className="w-4 h-4" />
@@ -219,7 +219,7 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             )}
             <a
               href="#contact"
-              className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium"
+              className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium text-sm"
               onClick={() => setIsMenuOpen(false)}
             >
               تواصل معنا
