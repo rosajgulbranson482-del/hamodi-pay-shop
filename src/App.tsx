@@ -12,6 +12,7 @@ import TrackOrder from "./pages/TrackOrder";
 import ProductDetails from "./pages/ProductDetails";
 import MyOrders from "./pages/MyOrders";
 import AccountSettings from "./pages/AccountSettings";
+import Favorites from "./pages/Favorites";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/track" element={<TrackOrder />} />
             <Route path="/my-orders" element={<MyOrders />} />
             <Route path="/account" element={<AccountSettings />} />
+            <Route path="/favorites" element={<Favorites />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
