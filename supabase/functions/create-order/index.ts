@@ -16,6 +16,7 @@ interface OrderItem {
 interface CreateOrderRequest {
   customer_name: string;
   customer_phone: string;
+  customer_email?: string;
   customer_address: string;
   governorate: string;
   payment_method: string;
@@ -113,7 +114,15 @@ serve(async (req) => {
       }
     }
 
-    console.log('Creating order for:', body.customer_name, 'Phone:', body.customer_phone);
+    // Validate email format if provided
+    if (body.customer_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.customer_email)) {
+      return new Response(
+        JSON.stringify({ error: 'البريد الإلكتروني غير صالح' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Creating order for:', body.customer_name, 'Phone:', body.customer_phone, 'Email:', body.customer_email || 'N/A');
 
     // Create Supabase client with service role to bypass RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -133,6 +142,7 @@ serve(async (req) => {
         order_number: orderNumber,
         customer_name: body.customer_name.trim(),
         customer_phone: body.customer_phone.trim(),
+        customer_email: body.customer_email?.trim() || null,
         customer_address: body.customer_address.trim(),
         governorate: body.governorate.trim(),
         payment_method: body.payment_method.trim(),

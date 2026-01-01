@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Phone, MapPin, User, MessageSquare, CreditCard, Copy, Check, Wallet, Banknote, Ticket, Loader2 } from 'lucide-react';
+import { X, Phone, MapPin, User, MessageSquare, CreditCard, Copy, Check, Wallet, Banknote, Ticket, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -57,6 +57,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    email: '',
     governorate: '',
     address: '',
     notes: '',
@@ -245,6 +246,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         body: {
           customer_name: formData.name,
           customer_phone: formData.phone,
+          customer_email: formData.email || null,
           customer_address: formData.address,
           governorate: selectedGovernorate?.name || '',
           payment_method: formData.paymentMethod,
@@ -315,6 +317,7 @@ ${orderItemsText}
       setFormData({
         name: '',
         phone: '',
+        email: '',
         governorate: '',
         address: '',
         notes: '',
@@ -408,6 +411,21 @@ ${orderItemsText}
                     <Button onClick={verifyCode}>تحقق</Button>
                   </div>
                 )}
+              </div>
+
+              {/* Email (Optional) */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-primary" />
+                  البريد الإلكتروني <span className="text-muted-foreground text-xs">(اختياري - لإرسال تحديثات الطلب)</span>
+                </Label>
+                <Input
+                  type="email"
+                  placeholder="example@email.com"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  dir="ltr"
+                />
               </div>
 
               {/* Governorate */}
