@@ -19,9 +19,11 @@ import {
   DialogTitle,
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { Eye, Loader2, RefreshCw, Check, Phone, MapPin } from 'lucide-react';
+import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -74,6 +76,8 @@ const AdminOrders: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [emailInputs, setEmailInputs] = useState<Record<string, string>>({});
+  const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -131,7 +135,60 @@ const AdminOrders: React.FC = () => {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "تم التحديث", description: "تم تحديث حالة الطلب بنجاح" });
+      
+      // Check if email is provided for this order and send notification
+      const email = emailInputs[orderId];
+      if (email && email.trim()) {
+        await sendEmailNotification(orderId, status, email.trim());
+      }
     }
+  };
+
+  const sendEmailNotification = async (orderId: string, status: string, email: string) => {
+    setSendingEmail(prev => ({ ...prev, [orderId]: true }));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('send-order-notification', {
+        body: { orderId, newStatus: status, customerEmail: email }
+      });
+
+      if (error) {
+        console.error('Email notification error:', error);
+        toast({ 
+          title: "تنبيه", 
+          description: "تم تحديث الحالة لكن فشل إرسال الإشعار بالبريد", 
+          variant: "destructive" 
+        });
+      } else if (data?.error) {
+        toast({ 
+          title: "تنبيه", 
+          description: data.error, 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ 
+          title: "تم الإرسال", 
+          description: "تم إرسال إشعار بالبريد الإلكتروني للعميل" 
+        });
+      }
+    } catch (err) {
+      console.error('Email notification exception:', err);
+    }
+    
+    setSendingEmail(prev => ({ ...prev, [orderId]: false }));
+  };
+
+  const handleManualEmailSend = async (order: Order) => {
+    const email = emailInputs[order.id];
+    if (!email || !email.trim()) {
+      toast({ 
+        title: "خطأ", 
+        description: "يرجى إدخال البريد الإلكتروني أولاً", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    await sendEmailNotification(order.id, order.status, email.trim());
   };
 
   const confirmPayment = async (orderId: string) => {
@@ -283,6 +340,40 @@ const AdminOrders: React.FC = () => {
                                 <p className="font-medium">{selectedOrder.notes}</p>
                               </div>
                             )}
+
+                            {/* Email Notification Section */}
+                            <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                              <Label className="text-sm flex items-center gap-1 mb-2">
+                                <Mail className="w-3 h-3" /> إرسال إشعار للعميل
+                              </Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="email"
+                                  placeholder="البريد الإلكتروني للعميل..."
+                                  value={emailInputs[selectedOrder.id] || ''}
+                                  onChange={(e) => setEmailInputs(prev => ({ 
+                                    ...prev, 
+                                    [selectedOrder.id]: e.target.value 
+                                  }))}
+                                  className="flex-1"
+                                  dir="ltr"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleManualEmailSend(selectedOrder)}
+                                  disabled={sendingEmail[selectedOrder.id] || !emailInputs[selectedOrder.id]?.trim()}
+                                >
+                                  {sendingEmail[selectedOrder.id] ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Send className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                سيتم إرسال إشعار تلقائي عند تغيير الحالة إذا تم إدخال البريد
+                              </p>
+                            </div>
 
                             <div className="border-t pt-4">
                               <h4 className="font-bold mb-3">المنتجات</h4>
