@@ -13,12 +13,29 @@ serve(async (req) => {
   }
 
   try {
-    const { orderNumber } = await req.json();
+    const { orderNumber, phoneLast4 } = await req.json();
 
     if (!orderNumber || typeof orderNumber !== 'string') {
       console.error('Invalid order number provided:', orderNumber);
       return new Response(
         JSON.stringify({ error: 'رقم الطلب مطلوب' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!phoneLast4 || typeof phoneLast4 !== 'string' || phoneLast4.length !== 4) {
+      console.error('Invalid phone last 4 digits:', phoneLast4);
+      return new Response(
+        JSON.stringify({ error: 'آخر 4 أرقام من رقم الهاتف مطلوبة' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate phone last 4 digits are numeric
+    if (!/^\d{4}$/.test(phoneLast4)) {
+      console.error('Phone last 4 digits not numeric:', phoneLast4);
+      return new Response(
+        JSON.stringify({ error: 'آخر 4 أرقام يجب أن تكون أرقام فقط' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -55,7 +72,8 @@ serve(async (req) => {
         total,
         governorate,
         payment_method,
-        payment_confirmed
+        payment_confirmed,
+        customer_phone
       `)
       .eq('order_number', sanitizedOrderNumber)
       .single();
@@ -63,10 +81,23 @@ serve(async (req) => {
     if (orderError || !order) {
       console.log('Order not found:', sanitizedOrderNumber);
       return new Response(
-        JSON.stringify({ error: 'الطلب غير موجود' }),
+        JSON.stringify({ error: 'الطلب غير موجود أو البيانات غير صحيحة' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Verify phone last 4 digits match
+    const orderPhoneLast4 = order.customer_phone.slice(-4);
+    if (orderPhoneLast4 !== phoneLast4) {
+      console.log('Phone verification failed for order:', sanitizedOrderNumber);
+      return new Response(
+        JSON.stringify({ error: 'الطلب غير موجود أو البيانات غير صحيحة' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Remove customer_phone from response for privacy
+    const { customer_phone, ...orderWithoutPhone } = order;
 
     // Fetch order items
     const { data: items, error: itemsError } = await supabase
@@ -78,12 +109,12 @@ serve(async (req) => {
       console.error('Error fetching order items:', itemsError);
     }
 
-    console.log('Order found successfully:', sanitizedOrderNumber);
+    console.log('Order found and verified successfully:', sanitizedOrderNumber);
 
     return new Response(
       JSON.stringify({ 
         order: {
-          ...order,
+          ...orderWithoutPhone,
           items: items || []
         }
       }),
