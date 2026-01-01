@@ -12,6 +12,7 @@ import Admin from "./pages/Admin";
 import TrackOrder from "./pages/TrackOrder";
 import ProductDetails from "./pages/ProductDetails";
 import MyOrders from "./pages/MyOrders";
+import AccountSettings from "./pages/AccountSettings";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/track" element={<TrackOrder />} />
             <Route path="/my-orders" element={<MyOrders />} />
+            <Route path="/account" element={<AccountSettings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
