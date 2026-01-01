@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard, Download, Filter, X, Calendar, Search } from 'lucide-react';
+import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard, Download, Filter, X, Calendar, Search, Printer } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { format, startOfDay, endOfDay, subDays, isWithinInterval } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -156,6 +156,214 @@ const AdminOrders: React.FC = () => {
   };
 
   const hasActiveFilters = searchQuery.trim() !== '' || statusFilter !== 'all' || dateFilter !== 'all';
+
+  const printInvoice = (order: Order, items: OrderItem[]) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        title: 'خطأ',
+        description: 'تعذر فتح نافذة الطباعة، يرجى السماح بالنوافذ المنبثقة',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>فاتورة ${order.order_number}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif; 
+            padding: 20px; 
+            background: #fff;
+            color: #333;
+          }
+          .invoice { max-width: 800px; margin: 0 auto; }
+          .header { 
+            text-align: center; 
+            border-bottom: 3px solid #7c3aed; 
+            padding-bottom: 20px; 
+            margin-bottom: 20px; 
+          }
+          .header h1 { color: #7c3aed; font-size: 28px; margin-bottom: 5px; }
+          .header p { color: #666; font-size: 14px; }
+          .invoice-info { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 20px;
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 8px;
+          }
+          .invoice-info div { }
+          .invoice-info h3 { color: #7c3aed; font-size: 14px; margin-bottom: 5px; }
+          .invoice-info p { font-size: 14px; }
+          .customer-info { 
+            background: #f8f8f8; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+          }
+          .customer-info h3 { 
+            color: #7c3aed; 
+            margin-bottom: 10px; 
+            font-size: 16px;
+          }
+          .customer-info p { margin-bottom: 5px; font-size: 14px; }
+          .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          .items-table th { 
+            background: #7c3aed; 
+            color: white; 
+            padding: 12px; 
+            text-align: right;
+            font-size: 14px;
+          }
+          .items-table td { 
+            padding: 12px; 
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+          }
+          .items-table tr:nth-child(even) { background: #f8f8f8; }
+          .totals { 
+            margin-top: 20px; 
+            text-align: left;
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 8px;
+          }
+          .totals div { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 8px 0;
+            font-size: 14px;
+          }
+          .totals .total { 
+            font-size: 18px; 
+            font-weight: bold; 
+            color: #7c3aed;
+            border-top: 2px solid #7c3aed;
+            margin-top: 10px;
+            padding-top: 15px;
+          }
+          .footer { 
+            text-align: center; 
+            margin-top: 30px; 
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 12px;
+          }
+          .status { 
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+          }
+          .status-pending { background: #fef3c7; color: #d97706; }
+          .status-confirmed { background: #dbeafe; color: #2563eb; }
+          .status-processing { background: #ede9fe; color: #7c3aed; }
+          .status-shipped { background: #ffedd5; color: #ea580c; }
+          .status-delivered { background: #dcfce7; color: #16a34a; }
+          .status-cancelled { background: #fee2e2; color: #dc2626; }
+          @media print {
+            body { padding: 0; }
+            .invoice { max-width: 100%; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice">
+          <div class="header">
+            <h1>⚡ حمودي ستور</h1>
+            <p>فاتورة طلب</p>
+          </div>
+          
+          <div class="invoice-info">
+            <div>
+              <h3>رقم الطلب</h3>
+              <p><strong>${order.order_number}</strong></p>
+            </div>
+            <div>
+              <h3>التاريخ</h3>
+              <p>${format(new Date(order.created_at), 'dd/MM/yyyy - HH:mm', { locale: ar })}</p>
+            </div>
+            <div>
+              <h3>الحالة</h3>
+              <p><span class="status status-${order.status}">${statusLabels[order.status]}</span></p>
+            </div>
+            <div>
+              <h3>طريقة الدفع</h3>
+              <p>${order.payment_method === 'cash_on_delivery' ? 'كاش عند الاستلام' : 'فودافون كاش'}</p>
+            </div>
+          </div>
+          
+          <div class="customer-info">
+            <h3>بيانات العميل</h3>
+            <p><strong>الاسم:</strong> ${order.customer_name}</p>
+            <p><strong>الهاتف:</strong> ${order.customer_phone}</p>
+            <p><strong>المحافظة:</strong> ${order.governorate}</p>
+            <p><strong>العنوان:</strong> ${order.customer_address}</p>
+            ${order.notes ? `<p><strong>ملاحظات:</strong> ${order.notes}</p>` : ''}
+          </div>
+          
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>المنتج</th>
+                <th>الكمية</th>
+                <th>السعر</th>
+                <th>الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map((item, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${item.product_name}</td>
+                  <td>${item.quantity}</td>
+                  <td>${item.product_price} ج.م</td>
+                  <td>${item.product_price * item.quantity} ج.م</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="totals">
+            <div>
+              <span>المنتجات:</span>
+              <span>${order.subtotal} ج.م</span>
+            </div>
+            <div>
+              <span>التوصيل:</span>
+              <span>${order.delivery_fee} ج.م</span>
+            </div>
+            <div class="total">
+              <span>الإجمالي:</span>
+              <span>${order.total} ج.م</span>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>شكراً لتسوقك من حمودي ستور ⚡</p>
+            <p>للاستفسارات: تواصل معنا عبر واتساب</p>
+          </div>
+        </div>
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
+  };
 
   const exportToExcel = () => {
     const exportData = filteredOrders.map(order => ({
@@ -724,6 +932,18 @@ ${statusMessage}
                                 <span>الإجمالي</span>
                                 <span className="text-primary">{selectedOrder.total} ج.م</span>
                               </div>
+                            </div>
+
+                            {/* Print Button */}
+                            <div className="border-t pt-4">
+                              <Button 
+                                onClick={() => printInvoice(selectedOrder, orderItems)}
+                                className="w-full"
+                                disabled={loadingItems || orderItems.length === 0}
+                              >
+                                <Printer className="w-4 h-4 ml-2" />
+                                طباعة الفاتورة
+                              </Button>
                             </div>
                           </div>
                         )}
