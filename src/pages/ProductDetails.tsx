@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import Header from '@/components/Header';
@@ -48,7 +49,7 @@ const ProductDetails = () => {
   const navigate = useNavigate();
   const { addToCart, items } = useCart();
   const { toast } = useToast();
-  
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [product, setProduct] = useState<Product | null>(null);
   const [additionalImages, setAdditionalImages] = useState<ProductImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -57,6 +58,7 @@ const ProductDetails = () => {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   
   const isInCart = product ? items.some(item => item.id === product.id) : false;
+  const isFav = product ? isFavorite(product.id) : false;
   const discount = product?.original_price
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
@@ -424,9 +426,10 @@ const ProductDetails = () => {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="py-6"
+                  className={cn("py-6", isFav && "bg-red-50 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800")}
+                  onClick={() => product && toggleFavorite(product.id)}
                 >
-                  <Heart className="w-5 h-5" />
+                  <Heart className={cn("w-5 h-5", isFav && "fill-red-500 text-red-500")} />
                 </Button>
               </div>
             </div>

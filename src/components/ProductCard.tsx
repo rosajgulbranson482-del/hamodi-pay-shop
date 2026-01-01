@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Check, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ShoppingCart, Check, ChevronRight, ChevronLeft, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
@@ -32,10 +33,12 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart, items } = useCart();
   const { toast } = useToast();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [additionalImages, setAdditionalImages] = useState<ProductImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   const isInCart = items.some(item => item.id === product.id);
+  const isFav = isFavorite(product.id);
   const discount = product.original_price
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
@@ -63,7 +66,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     fetchAdditionalImages();
   }, [product.id]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!inStock) return;
     addToCart({
       id: product.id,
@@ -77,12 +82,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     });
   };
 
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite(product.id);
+  };
+
   const nextImage = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
   };
 
   const prevImage = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
   };
@@ -96,6 +109,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
+        
+        {/* Favorite Button */}
+        <button
+          onClick={handleToggleFavorite}
+          className={cn(
+            "absolute top-3 left-3 w-9 h-9 rounded-full flex items-center justify-center transition-all z-10",
+            isFav 
+              ? "bg-red-500 text-white" 
+              : "bg-background/80 text-muted-foreground hover:bg-background hover:text-red-500"
+          )}
+        >
+          <Heart className={cn("w-5 h-5", isFav && "fill-current")} />
+        </button>
         
         {/* Image Navigation */}
         {allImages.length > 1 && (
@@ -119,6 +145,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 <button
                   key={idx}
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     setCurrentImageIndex(idx);
                   }}
@@ -155,7 +182,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Image Counter */}
         {allImages.length > 1 && (
-          <div className="absolute top-3 left-3 bg-background/80 text-foreground text-xs px-2 py-1 rounded-full">
+          <div className="absolute top-12 left-3 bg-background/80 text-foreground text-xs px-2 py-1 rounded-full">
             {currentImageIndex + 1}/{allImages.length}
           </div>
         )}

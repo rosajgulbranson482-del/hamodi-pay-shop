@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Menu, X, Zap, Search, User, LogOut, Package, Settings } from 'lucide-react';
+import { ShoppingCart, Menu, X, Zap, Search, User, LogOut, Package, Settings, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useFavorites } from '@/hooks/useFavorites';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import CartDrawer from '@/components/CartDrawer';
@@ -21,6 +22,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
   const { totalItems } = useCart();
   const { user, profile, isAuthenticated, signOut } = useAuth();
+  const { favoriteCount } = useFavorites();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -76,6 +78,17 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/favorites" className="flex items-center gap-2 cursor-pointer">
+                      <Heart className="w-4 h-4" />
+                      المفضلة
+                      {favoriteCount > 0 && (
+                        <span className="mr-auto text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full">
+                          {favoriteCount}
+                        </span>
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/my-orders" className="flex items-center gap-2 cursor-pointer">
                       <Package className="w-4 h-4" />
@@ -157,6 +170,19 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             </Link>
             {isAuthenticated ? (
               <>
+                <Link
+                  to="/favorites"
+                  className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Heart className="w-4 h-4" />
+                  المفضلة
+                  {favoriteCount > 0 && (
+                    <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full">
+                      {favoriteCount}
+                    </span>
+                  )}
+                </Link>
                 <Link
                   to="/my-orders"
                   className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
