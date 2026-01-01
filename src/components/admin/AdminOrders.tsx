@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard, Download, Filter, X, Calendar } from 'lucide-react';
+import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard, Download, Filter, X, Calendar, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { format, startOfDay, endOfDay, subDays, isWithinInterval } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -91,6 +91,7 @@ const AdminOrders: React.FC = () => {
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
   
   // Filter states
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [customDateFrom, setCustomDateFrom] = useState<string>('');
@@ -98,6 +99,17 @@ const AdminOrders: React.FC = () => {
 
   // Filter orders
   const filteredOrders = orders.filter(order => {
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const matchesName = order.customer_name.toLowerCase().includes(query);
+      const matchesPhone = order.customer_phone.includes(query);
+      const matchesOrderNumber = order.order_number.toLowerCase().includes(query);
+      if (!matchesName && !matchesPhone && !matchesOrderNumber) {
+        return false;
+      }
+    }
+    
     // Status filter
     if (statusFilter !== 'all' && order.status !== statusFilter) {
       return false;
@@ -136,13 +148,14 @@ const AdminOrders: React.FC = () => {
   });
 
   const clearFilters = () => {
+    setSearchQuery('');
     setStatusFilter('all');
     setDateFilter('all');
     setCustomDateFrom('');
     setCustomDateTo('');
   };
 
-  const hasActiveFilters = statusFilter !== 'all' || dateFilter !== 'all';
+  const hasActiveFilters = searchQuery.trim() !== '' || statusFilter !== 'all' || dateFilter !== 'all';
 
   const exportToExcel = () => {
     const exportData = filteredOrders.map(order => ({
@@ -387,8 +400,21 @@ ${statusMessage}
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Search & Filters */}
       <div className="flex flex-wrap items-center gap-3 p-4 bg-muted/50 rounded-xl border border-border">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="بحث بالاسم، رقم الطلب، أو الهاتف..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 pr-9"
+          />
+        </div>
+
+        <div className="h-6 w-px bg-border hidden sm:block" />
+        
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">فلترة:</span>
