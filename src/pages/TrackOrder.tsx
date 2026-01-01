@@ -15,6 +15,7 @@ import {
   Clock, 
   XCircle,
   MapPin,
+  Phone,
   Zap,
   ArrowRight
 } from 'lucide-react';
@@ -86,28 +87,42 @@ const TrackOrder: React.FC = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
+  const [phoneLast4, setPhoneLast4] = useState('');
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<TrackedOrder | null>(null);
 
   // Check for query param on mount
   useEffect(() => {
     const query = searchParams.get('q');
-    if (query) {
+    const phone = searchParams.get('p');
+    if (query && phone && phone.length === 4) {
       setSearchQuery(query);
-      searchOrder(query);
+      setPhoneLast4(phone);
+      searchOrder(query, phone);
+    } else if (query) {
+      setSearchQuery(query);
     }
   }, [searchParams]);
 
-  const searchOrder = async (query: string) => {
+  const searchOrder = async (query: string, phone: string) => {
     if (!query.trim()) return;
+    
+    if (phone.length !== 4) {
+      toast({ 
+        title: "خطأ", 
+        description: "يرجى إدخال آخر 4 أرقام من رقم الهاتف", 
+        variant: "destructive" 
+      });
+      return;
+    }
 
     setLoading(true);
     setOrder(null);
 
     try {
-      // Use edge function to securely fetch order
+      // Use edge function to securely fetch order with phone verification
       const { data, error } = await supabase.functions.invoke('track-order', {
-        body: { orderNumber: query.trim() }
+        body: { orderNumber: query.trim(), phoneLast4: phone }
       });
 
       if (error) {
@@ -140,7 +155,7 @@ const TrackOrder: React.FC = () => {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    searchOrder(searchQuery);
+    searchOrder(searchQuery, phoneLast4);
   };
 
   const currentStepIndex = order ? statusSteps.indexOf(order.status) : -1;
@@ -180,24 +195,43 @@ const TrackOrder: React.FC = () => {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">تتبع طلبك</h1>
             <p className="text-muted-foreground">
-              أدخل رقم الطلب لمعرفة حالته
+              أدخل رقم الطلب وآخر 4 أرقام من رقم الهاتف للتحقق
             </p>
           </div>
 
-          <form onSubmit={handleSearch} className="flex gap-3 mb-8">
-            <Input
-              placeholder="رقم الطلب (مثال: HS-20260101-1234)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Search className="w-5 h-5" />
-              )}
-            </Button>
+          <form onSubmit={handleSearch} className="space-y-4 mb-8">
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Package className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="رقم الطلب (مثال: HS-20260101-1234)..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pr-10"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="آخر 4 أرقام من رقم الهاتف..."
+                  value={phoneLast4}
+                  onChange={(e) => setPhoneLast4(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  className="pr-10"
+                  maxLength={4}
+                  inputMode="numeric"
+                  pattern="\d{4}"
+                />
+              </div>
+              <Button type="submit" disabled={loading || !searchQuery.trim() || phoneLast4.length !== 4}>
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Search className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
           </form>
 
           {/* Order Details */}
