@@ -268,20 +268,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    // Update coupon usage count
+    // Update coupon usage count using secure RPC function
     if (appliedCoupon) {
-      const { data: couponData } = await supabase
-        .from('coupons')
-        .select('used_count')
-        .eq('code', appliedCoupon.code)
-        .single();
-      
-      if (couponData) {
-        await supabase
-          .from('coupons')
-          .update({ used_count: (couponData.used_count || 0) + 1 })
-          .eq('code', appliedCoupon.code);
-      }
+      await supabase.rpc('increment_coupon_usage', { 
+        coupon_code_param: appliedCoupon.code 
+      });
     }
 
     const orderItems = items.map(item => ({
