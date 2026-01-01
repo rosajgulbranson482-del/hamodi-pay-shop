@@ -82,10 +82,17 @@ const Admin: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [navigate, toast]);
 
-  // Subscribe to new orders
+  // Subscribe to new orders with realtime notifications
   useEffect(() => {
+    if (!isAdmin) return;
+
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     const channel = supabase
-      .channel('new-orders')
+      .channel('admin-realtime-orders')
       .on(
         'postgres_changes',
         {
@@ -94,14 +101,48 @@ const Admin: React.FC = () => {
           table: 'orders'
         },
         (payload) => {
+          const newOrder = payload.new as { 
+            customer_name: string; 
+            order_number: string; 
+            total: number;
+          };
+          
           setNewOrdersCount(prev => prev + 1);
+          
+          // Show toast notification
           toast({
-            title: "🔔 طلب جديد!",
-            description: `تم استلام طلب جديد من ${payload.new.customer_name}`,
+            title: "🛒 طلب جديد!",
+            description: `طلب رقم ${newOrder.order_number} - ${newOrder.customer_name} - ${Number(newOrder.total).toLocaleString()} ج.م`,
           });
-          // Play notification sound
-          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-          audio.play().catch(() => {});
+
+          // Browser notification (if permitted)
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🛒 طلب جديد!', {
+              body: `طلب من ${newOrder.customer_name} - ${Number(newOrder.total).toLocaleString()} ج.م`,
+              icon: '/favicon.ico',
+              tag: 'new-order'
+            });
+          }
+
+          // Play notification sound (built-in beep)
+          try {
+            const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+          } catch (e) {
+            console.log('Audio notification not available:', e);
+          }
         }
       )
       .subscribe();
@@ -109,7 +150,7 @@ const Admin: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [toast]);
+  }, [isAdmin, toast]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
