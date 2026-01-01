@@ -451,17 +451,35 @@ ${statusMessage}
                               <Label className="text-sm flex items-center gap-1 mb-2">
                                 <MessageCircle className="w-3 h-3 text-green-600" /> إرسال واتساب (مجاني)
                               </Label>
-                              <a
-                                href={generateWhatsAppUrl(selectedOrder, selectedOrder.status)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
-                              >
-                                <MessageCircle className="w-4 h-4" />
-                                إرسال إشعار واتساب للعميل
-                              </a>
+                              <div className="flex gap-2 flex-wrap">
+                                <Button
+                                  onClick={() => {
+                                    const url = generateWhatsAppUrl(selectedOrder, selectedOrder.status);
+                                    window.open(url, '_blank', 'noopener,noreferrer');
+                                  }}
+                                  className="bg-green-500 hover:bg-green-600 text-white"
+                                  size="sm"
+                                >
+                                  <MessageCircle className="w-4 h-4 ml-2" />
+                                  فتح واتساب
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const url = generateWhatsAppUrl(selectedOrder, selectedOrder.status);
+                                    navigator.clipboard.writeText(url);
+                                    toast({
+                                      title: "تم نسخ الرابط",
+                                      description: "الصق الرابط في متصفح جديد لفتح واتساب",
+                                    });
+                                  }}
+                                >
+                                  نسخ الرابط
+                                </Button>
+                              </div>
                               <p className="text-xs text-muted-foreground mt-2">
-                                سيفتح واتساب مع رسالة جاهزة للإرسال
+                                إذا لم يعمل الزر، انسخ الرابط والصقه في متصفح جديد
                               </p>
                             </div>
 
