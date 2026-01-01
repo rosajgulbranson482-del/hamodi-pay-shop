@@ -19,7 +19,8 @@ import {
   DialogTitle,
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard } from 'lucide-react';
+import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
@@ -88,6 +89,44 @@ const AdminOrders: React.FC = () => {
   const [loadingItems, setLoadingItems] = useState(false);
   const [emailInputs, setEmailInputs] = useState<Record<string, string>>({});
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
+
+  const exportToExcel = () => {
+    const exportData = orders.map(order => ({
+      'رقم الطلب': order.order_number,
+      'اسم العميل': order.customer_name,
+      'رقم الهاتف': order.customer_phone,
+      'البريد الإلكتروني': order.customer_email || '-',
+      'المحافظة': order.governorate,
+      'العنوان': order.customer_address,
+      'المنتجات': order.subtotal,
+      'التوصيل': order.delivery_fee,
+      'الإجمالي': order.total,
+      'طريقة الدفع': order.payment_method === 'cash_on_delivery' ? 'كاش عند الاستلام' : 'فودافون كاش / انستا باي',
+      'تأكيد الدفع': order.payment_confirmed ? 'نعم' : 'لا',
+      'الحالة': statusLabels[order.status],
+      'ملاحظات': order.notes || '-',
+      'تاريخ الطلب': format(new Date(order.created_at), 'yyyy/MM/dd HH:mm', { locale: ar }),
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'الطلبات');
+    
+    // Auto-size columns
+    const maxWidth = 30;
+    const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+      wch: Math.min(maxWidth, Math.max(key.length, ...exportData.map(row => String(row[key as keyof typeof row] || '').length)))
+    }));
+    worksheet['!cols'] = colWidths;
+
+    const fileName = `طلبات_حمودي_ستور_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+
+    toast({
+      title: 'تم التصدير بنجاح',
+      description: `تم تصدير ${orders.length} طلب إلى ملف Excel`,
+    });
+  };
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -280,12 +319,18 @@ ${statusMessage}
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-bold">إدارة الطلبات</h2>
-        <Button variant="outline" size="sm" onClick={fetchOrders}>
-          <RefreshCw className="w-4 h-4 ml-2" />
-          تحديث
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportToExcel} disabled={orders.length === 0}>
+            <Download className="w-4 h-4 ml-2" />
+            تصدير Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchOrders}>
+            <RefreshCw className="w-4 h-4 ml-2" />
+            تحديث
+          </Button>
+        </div>
       </div>
 
       {orders.length === 0 ? (
