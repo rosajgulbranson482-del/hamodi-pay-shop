@@ -32,6 +32,7 @@ interface Order {
   order_number: string;
   customer_name: string;
   customer_phone: string;
+  customer_email: string | null;
   customer_address: string;
   governorate: string;
   delivery_fee: number;
@@ -126,6 +127,9 @@ const AdminOrders: React.FC = () => {
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    // Find the order to get its email
+    const order = orders.find(o => o.id === orderId);
+    
     const { error } = await supabase
       .from('orders')
       .update({ status })
@@ -136,8 +140,8 @@ const AdminOrders: React.FC = () => {
     } else {
       toast({ title: "تم التحديث", description: "تم تحديث حالة الطلب بنجاح" });
       
-      // Check if email is provided for this order and send notification
-      const email = emailInputs[orderId];
+      // Check if email is provided (either from input or saved in order) and send notification
+      const email = emailInputs[orderId] ?? order?.customer_email;
       if (email && email.trim()) {
         await sendEmailNotification(orderId, status, email.trim());
       }
@@ -179,7 +183,7 @@ const AdminOrders: React.FC = () => {
   };
 
   const handleManualEmailSend = async (order: Order) => {
-    const email = emailInputs[order.id];
+    const email = emailInputs[order.id] ?? order.customer_email;
     if (!email || !email.trim()) {
       toast({ 
         title: "خطأ", 
@@ -346,11 +350,16 @@ const AdminOrders: React.FC = () => {
                               <Label className="text-sm flex items-center gap-1 mb-2">
                                 <Mail className="w-3 h-3" /> إرسال إشعار للعميل
                               </Label>
+                              {selectedOrder.customer_email && (
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  البريد المحفوظ: <span className="font-mono text-foreground">{selectedOrder.customer_email}</span>
+                                </p>
+                              )}
                               <div className="flex gap-2">
                                 <Input
                                   type="email"
-                                  placeholder="البريد الإلكتروني للعميل..."
-                                  value={emailInputs[selectedOrder.id] || ''}
+                                  placeholder={selectedOrder.customer_email || "البريد الإلكتروني للعميل..."}
+                                  value={emailInputs[selectedOrder.id] ?? (selectedOrder.customer_email || '')}
                                   onChange={(e) => setEmailInputs(prev => ({ 
                                     ...prev, 
                                     [selectedOrder.id]: e.target.value 
@@ -361,7 +370,7 @@ const AdminOrders: React.FC = () => {
                                 <Button
                                   size="sm"
                                   onClick={() => handleManualEmailSend(selectedOrder)}
-                                  disabled={sendingEmail[selectedOrder.id] || !emailInputs[selectedOrder.id]?.trim()}
+                                  disabled={sendingEmail[selectedOrder.id] || !(emailInputs[selectedOrder.id] ?? selectedOrder.customer_email)?.trim()}
                                 >
                                   {sendingEmail[selectedOrder.id] ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -371,7 +380,7 @@ const AdminOrders: React.FC = () => {
                                 </Button>
                               </div>
                               <p className="text-xs text-muted-foreground mt-2">
-                                سيتم إرسال إشعار تلقائي عند تغيير الحالة إذا تم إدخال البريد
+                                سيتم إرسال إشعار تلقائي عند تغيير الحالة إذا كان البريد متوفراً
                               </p>
                             </div>
 
