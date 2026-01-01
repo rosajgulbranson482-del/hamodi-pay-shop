@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle } from 'lucide-react';
+import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
@@ -301,6 +301,7 @@ ${statusMessage}
                 <TableHead>العميل</TableHead>
                 <TableHead>المحافظة</TableHead>
                 <TableHead>الإجمالي</TableHead>
+                <TableHead>طريقة الدفع</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>الدفع</TableHead>
                 <TableHead>التاريخ</TableHead>
@@ -321,6 +322,15 @@ ${statusMessage}
                   </TableCell>
                   <TableCell>{order.governorate}</TableCell>
                   <TableCell className="font-bold">{order.total} ج.م</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={
+                      order.payment_method === 'cash' 
+                        ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' 
+                        : 'bg-blue-500/10 text-blue-600 border-blue-500/30'
+                    }>
+                      {order.payment_method === 'cash' ? 'كاش عند الاستلام' : 'تحويل بنكي'}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <Select
                       value={order.status}
@@ -392,6 +402,14 @@ ${statusMessage}
                                   <MapPin className="w-3 h-3" /> المحافظة
                                 </p>
                                 <p className="font-medium">{selectedOrder.governorate}</p>
+                              </div>
+                              <div className="p-3 bg-muted rounded-lg col-span-2">
+                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                  <CreditCard className="w-3 h-3" /> طريقة الدفع
+                                </p>
+                                <p className="font-medium">
+                                  {selectedOrder.payment_method === 'cash' ? 'كاش عند الاستلام' : 'تحويل بنكي'}
+                                </p>
                               </div>
                             </div>
 
