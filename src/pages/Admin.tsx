@@ -177,31 +177,31 @@ const Admin: React.FC = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center">
-                <Zap className="w-5 h-5 text-primary-foreground" />
+          <div className="flex items-center justify-between h-14 md:h-16">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 gradient-primary rounded-xl flex items-center justify-center">
+                <Zap className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-foreground">لوحة التحكم</h1>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
+                <h1 className="text-sm md:text-lg font-bold text-foreground">لوحة التحكم</h1>
+                <p className="text-[10px] md:text-xs text-muted-foreground truncate max-w-[120px] md:max-w-none">{user?.email}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 md:gap-3">
               {newOrdersCount > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-destructive/10 rounded-full">
-                  <Bell className="w-4 h-4 text-destructive animate-pulse" />
-                  <span className="text-sm font-medium text-destructive">{newOrdersCount} طلب جديد</span>
+                <div className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-destructive/10 rounded-full">
+                  <Bell className="w-3.5 h-3.5 md:w-4 md:h-4 text-destructive animate-pulse" />
+                  <span className="text-xs md:text-sm font-medium text-destructive">{newOrdersCount}</span>
                 </div>
               )}
-              <Button variant="outline" size="sm" onClick={() => navigate('/')}>
-                <ShoppingBag className="w-4 h-4 ml-2" />
-                المتجر
+              <Button variant="outline" size="sm" onClick={() => navigate('/')} className="h-8 md:h-9 px-2 md:px-3">
+                <ShoppingBag className="w-4 h-4 md:ml-2" />
+                <span className="hidden md:inline">المتجر</span>
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 ml-2" />
-                خروج
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="h-8 md:h-9 px-2 md:px-3">
+                <LogOut className="w-4 h-4 md:ml-2" />
+                <span className="hidden md:inline">خروج</span>
               </Button>
             </div>
           </div>
@@ -210,28 +210,28 @@ const Admin: React.FC = () => {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="orders" className="space-y-6" onValueChange={() => setNewOrdersCount(0)}>
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
-            <TabsTrigger value="orders" className="relative">
-              <ShoppingBag className="w-4 h-4 ml-2" />
-              الطلبات
+        <Tabs defaultValue="orders" className="space-y-4 md:space-y-6" onValueChange={() => setNewOrdersCount(0)}>
+          <TabsList className="grid w-full max-w-2xl grid-cols-4 h-auto p-1">
+            <TabsTrigger value="orders" className="relative flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
+              <ShoppingBag className="w-4 h-4" />
+              <span className="hidden sm:inline">الطلبات</span>
               {newOrdersCount > 0 && (
-                <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                <Badge variant="destructive" className="absolute -top-1 -right-1 md:-top-2 md:-right-2 h-4 w-4 md:h-5 md:w-5 p-0 flex items-center justify-center text-[10px] md:text-xs">
                   {newOrdersCount}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="products">
-              <Package className="w-4 h-4 ml-2" />
-              المنتجات
+            <TabsTrigger value="products" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
+              <Package className="w-4 h-4" />
+              <span className="hidden sm:inline">المنتجات</span>
             </TabsTrigger>
-            <TabsTrigger value="coupons">
-              <Ticket className="w-4 h-4 ml-2" />
-              الكوبونات
+            <TabsTrigger value="coupons" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
+              <Ticket className="w-4 h-4" />
+              <span className="hidden sm:inline">الكوبونات</span>
             </TabsTrigger>
-            <TabsTrigger value="reviews">
-              <Star className="w-4 h-4 ml-2" />
-              التقييمات
+            <TabsTrigger value="reviews" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
+              <Star className="w-4 h-4" />
+              <span className="hidden sm:inline">التقييمات</span>
             </TabsTrigger>
           </TabsList>
 

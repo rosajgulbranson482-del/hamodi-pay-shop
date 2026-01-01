@@ -343,15 +343,15 @@ ${orderItemsText}
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         className="absolute inset-0 bg-foreground/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-card rounded-2xl shadow-xl">
-        <div className="sticky top-0 flex items-center justify-between p-4 border-b border-border bg-card rounded-t-2xl z-10">
-          <h2 className="text-xl font-bold text-foreground">
+      <div className="relative w-full sm:max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-y-auto bg-card rounded-t-2xl sm:rounded-2xl shadow-xl">
+        <div className="sticky top-0 flex items-center justify-between p-3 sm:p-4 border-b border-border bg-card rounded-t-2xl z-10">
+          <h2 className="text-lg sm:text-xl font-bold text-foreground">
             {step === 1 ? 'إتمام الطلب' : 'الدفع الإلكتروني'}
           </h2>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -359,7 +359,7 @@ ${orderItemsText}
           </Button>
         </div>
 
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
           {step === 1 ? (
             <div className="space-y-4">
               {/* Name */}
