@@ -262,54 +262,49 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const handleConfirmOrder = async () => {
     setSubmitting(true);
     
-    const { data: orderData, error: orderError } = await supabase
-      .from('orders')
-      .insert([{
-        customer_name: formData.name,
-        customer_phone: formData.phone,
-        customer_address: formData.address,
-        governorate: selectedGovernorate?.name || '',
-        delivery_fee: deliveryFee,
-        subtotal: totalPrice,
-        total: finalTotal,
-        payment_method: formData.paymentMethod,
-        notes: formData.notes || null,
-        order_number: 'temp',
-        coupon_code: appliedCoupon?.code || null,
-        discount_amount: discountAmount,
-        user_id: user?.id || null, // Link order to authenticated user
-      }])
-      .select()
-      .single();
-
-    if (orderError) {
-      toast({ title: "خطأ", description: orderError.message, variant: "destructive" });
-      setSubmitting(false);
-      return;
-    }
-
-    // Update coupon usage count using secure RPC function
-    if (appliedCoupon) {
-      await supabase.rpc('increment_coupon_usage', { 
-        coupon_code_param: appliedCoupon.code 
+    try {
+      // Use edge function to create order securely
+      const { data, error } = await supabase.functions.invoke('create-order', {
+        body: {
+          customer_name: formData.name,
+          customer_phone: formData.phone,
+          customer_address: formData.address,
+          governorate: selectedGovernorate?.name || '',
+          payment_method: formData.paymentMethod,
+          notes: formData.notes || null,
+          coupon_code: appliedCoupon?.code || null,
+          items: items.map(item => ({
+            product_id: item.id,
+            product_name: item.name,
+            product_price: item.price,
+            quantity: item.quantity,
+          })),
+          subtotal: totalPrice,
+          delivery_fee: deliveryFee,
+          discount_amount: discountAmount,
+          total: finalTotal,
+          user_id: user?.id || null,
+        }
       });
-    }
 
-    const orderItems = items.map(item => ({
-      order_id: orderData.id,
-      product_name: item.name,
-      product_price: item.price,
-      quantity: item.quantity,
-    }));
+      if (error || data?.error) {
+        toast({ 
+          title: "خطأ", 
+          description: data?.error || error?.message || "حدث خطأ أثناء إنشاء الطلب", 
+          variant: "destructive" 
+        });
+        setSubmitting(false);
+        return;
+      }
 
-    await supabase.from('order_items').insert(orderItems);
+      const orderData = data.order;
 
-    const orderItemsText = items.map(item => `• ${item.name} (${item.quantity}×)`).join('\n');
-    const discountText = appliedCoupon 
-      ? `\n🏷️ *الكوبون:* ${appliedCoupon.code} (-${discountAmount} ج.م)`
-      : '';
-    
-    const whatsappMessage = `🛒 *طلب جديد من حمودي ستور*
+      const orderItemsText = items.map(item => `• ${item.name} (${item.quantity}×)`).join('\n');
+      const discountText = appliedCoupon 
+        ? `\n🏷️ *الكوبون:* ${appliedCoupon.code} (-${discountAmount} ج.م)`
+        : '';
+      
+      const whatsappMessage = `🛒 *طلب جديد من حمودي ستور*
 
 📦 *رقم الطلب:* ${orderData.order_number}
 
@@ -328,32 +323,41 @@ ${orderItemsText}
 
 💳 *طريقة الدفع:* ${getPaymentMethodLabel(formData.paymentMethod)}`;
 
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`;
-    
-    toast({
-      title: "تم تأكيد الطلب!",
-      description: `رقم طلبك: ${orderData.order_number} - جاري فتح واتساب...`,
-    });
-    
-    window.open(whatsappUrl, '_blank');
-    
-    clearCart();
-    onClose();
-    setStep(1);
-    setFormData({
-      name: '',
-      phone: '',
-      governorate: '',
-      address: '',
-      notes: '',
-      verificationCode: '',
-      paymentMethod: '',
-    });
-    setIsVerified(false);
-    setSentCode('');
-    setAppliedCoupon(null);
-    setCouponCode('');
-    setSubmitting(false);
+      const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`;
+      
+      toast({
+        title: "تم تأكيد الطلب!",
+        description: `رقم طلبك: ${orderData.order_number} - جاري فتح واتساب...`,
+      });
+      
+      window.open(whatsappUrl, '_blank');
+      
+      clearCart();
+      onClose();
+      setStep(1);
+      setFormData({
+        name: '',
+        phone: '',
+        governorate: '',
+        address: '',
+        notes: '',
+        verificationCode: '',
+        paymentMethod: '',
+      });
+      setIsVerified(false);
+      setSentCode('');
+      setAppliedCoupon(null);
+      setCouponCode('');
+    } catch (err) {
+      console.error('Order creation error:', err);
+      toast({ 
+        title: "خطأ", 
+        description: "حدث خطأ أثناء إنشاء الطلب", 
+        variant: "destructive" 
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
