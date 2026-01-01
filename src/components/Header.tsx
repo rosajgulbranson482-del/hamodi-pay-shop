@@ -7,6 +7,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import CartDrawer from '@/components/CartDrawer';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,8 +68,9 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             </a>
           </nav>
 
-          {/* Cart & User Menu */}
-          <div className="flex items-center gap-2">
+          {/* Theme Toggle, Cart & User Menu */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle />
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
