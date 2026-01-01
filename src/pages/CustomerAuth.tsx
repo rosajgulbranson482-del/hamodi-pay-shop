@@ -32,41 +32,47 @@ const CustomerAuth: React.FC = () => {
   const [phone, setPhone] = useState('');
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setTimeout(async () => {
-          const { data: isAdmin } = await supabase.rpc('has_role', {
-            _user_id: session.user.id,
-            _role: 'admin'
-          });
-          if (isAdmin) {
-            navigate('/admin');
-          } else {
-            navigate('/');
-          }
-          setCheckingAuth(false);
-        }, 0);
-      } else {
-        setCheckingAuth(false);
-      }
-    });
+    let isMounted = true;
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
+    const checkUserRole = async (userId: string) => {
+      try {
         const { data: isAdmin } = await supabase.rpc('has_role', {
-          _user_id: session.user.id,
+          _user_id: userId,
           _role: 'admin'
         });
-        if (isAdmin) {
-          navigate('/admin');
-        } else {
+        if (isMounted) {
+          navigate(isAdmin ? '/admin' : '/');
+        }
+      } catch (error) {
+        console.error('Error checking role:', error);
+        if (isMounted) {
           navigate('/');
         }
       }
-      setCheckingAuth(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setTimeout(() => checkUserRole(session.user.id), 0);
+      } else {
+        if (isMounted) setCheckingAuth(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        checkUserRole(session.user.id);
+      } else {
+        if (isMounted) setCheckingAuth(false);
+      }
+    }).catch(() => {
+      if (isMounted) setCheckingAuth(false);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
