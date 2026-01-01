@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send } from 'lucide-react';
+import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
@@ -68,6 +68,15 @@ const statusLabels: Record<OrderStatus, string> = {
   shipped: 'تم الشحن',
   delivered: 'تم التوصيل',
   cancelled: 'ملغي',
+};
+
+const statusMessages: Record<OrderStatus, string> = {
+  pending: 'طلبك قيد المراجعة وسيتم التأكيد قريباً',
+  confirmed: 'تم تأكيد طلبك وجاري التجهيز',
+  processing: 'جاري تجهيز طلبك للشحن',
+  shipped: 'تم شحن طلبك وفي الطريق إليك! 🚚',
+  delivered: 'تم توصيل طلبك بنجاح! شكراً لتسوقك معنا 🎉',
+  cancelled: 'نأسف، تم إلغاء طلبك. تواصل معنا لأي استفسار',
 };
 
 const AdminOrders: React.FC = () => {
@@ -145,7 +154,60 @@ const AdminOrders: React.FC = () => {
       if (email && email.trim()) {
         await sendEmailNotification(orderId, status, email.trim());
       }
+
+      // Show WhatsApp notification option
+      if (order?.customer_phone) {
+        const whatsappUrl = generateWhatsAppUrl(order, status);
+        toast({
+          title: "إرسال إشعار واتساب؟",
+          description: (
+            <div className="flex gap-2 mt-2">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4" />
+                إرسال واتساب
+              </a>
+            </div>
+          ),
+          duration: 10000,
+        });
+      }
     }
+  };
+
+  const generateWhatsAppUrl = (order: Order, status: OrderStatus) => {
+    const statusLabel = statusLabels[status];
+    const statusMessage = statusMessages[status];
+    
+    const message = `⚡ *حمودي ستور*
+
+مرحباً ${order.customer_name}! 👋
+
+📦 *تحديث حالة طلبك*
+رقم الطلب: ${order.order_number}
+
+✨ *الحالة الجديدة:* ${statusLabel}
+
+${statusMessage}
+
+الإجمالي: ${order.total} ج.م
+التوصيل إلى: ${order.governorate}
+
+شكراً لثقتك في حمودي ستور! 💜`;
+
+    // Format phone number for WhatsApp (remove leading 0 and add Egypt code)
+    let phone = order.customer_phone.replace(/\D/g, '');
+    if (phone.startsWith('0')) {
+      phone = '2' + phone;
+    } else if (!phone.startsWith('20')) {
+      phone = '20' + phone;
+    }
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
 
   const sendEmailNotification = async (orderId: string, status: string, email: string) => {
@@ -381,6 +443,25 @@ const AdminOrders: React.FC = () => {
                               </div>
                               <p className="text-xs text-muted-foreground mt-2">
                                 سيتم إرسال إشعار تلقائي عند تغيير الحالة إذا كان البريد متوفراً
+                              </p>
+                            </div>
+
+                            {/* WhatsApp Notification Section */}
+                            <div className="p-3 bg-green-500/5 border border-green-500/20 rounded-lg">
+                              <Label className="text-sm flex items-center gap-1 mb-2">
+                                <MessageCircle className="w-3 h-3 text-green-600" /> إرسال واتساب (مجاني)
+                              </Label>
+                              <a
+                                href={generateWhatsAppUrl(selectedOrder, selectedOrder.status)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                                إرسال إشعار واتساب للعميل
+                              </a>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                سيفتح واتساب مع رسالة جاهزة للإرسال
                               </p>
                             </div>
 
