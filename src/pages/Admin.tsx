@@ -6,11 +6,12 @@ import { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Zap, LogOut, Package, ShoppingBag, Bell, Loader2, Ticket, Star } from 'lucide-react';
+import { Zap, LogOut, Package, ShoppingBag, Bell, Loader2, Ticket, Star, BarChart3 } from 'lucide-react';
 import AdminOrders from '@/components/admin/AdminOrders';
 import AdminProducts from '@/components/admin/AdminProducts';
 import AdminCoupons from '@/components/admin/AdminCoupons';
 import AdminReviews from '@/components/admin/AdminReviews';
+import AdminStats from '@/components/admin/AdminStats';
 import { Badge } from '@/components/ui/badge';
 
 const Admin: React.FC = () => {
@@ -210,8 +211,12 @@ const Admin: React.FC = () => {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="orders" className="space-y-4 md:space-y-6" onValueChange={() => setNewOrdersCount(0)}>
-          <TabsList className="grid w-full max-w-2xl grid-cols-4 h-auto p-1">
+        <Tabs defaultValue="stats" className="space-y-4 md:space-y-6" onValueChange={() => setNewOrdersCount(0)}>
+          <TabsList className="grid w-full max-w-3xl grid-cols-5 h-auto p-1">
+            <TabsTrigger value="stats" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
+              <BarChart3 className="w-4 h-4" />
+              <span className="hidden sm:inline">الإحصائيات</span>
+            </TabsTrigger>
             <TabsTrigger value="orders" className="relative flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
               <ShoppingBag className="w-4 h-4" />
               <span className="hidden sm:inline">الطلبات</span>
@@ -234,6 +239,10 @@ const Admin: React.FC = () => {
               <span className="hidden sm:inline">التقييمات</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="stats">
+            <AdminStats />
+          </TabsContent>
 
           <TabsContent value="orders">
             <AdminOrders />
