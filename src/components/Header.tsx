@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Menu, X, Zap, Search, User, LogOut, Package } from 'lucide-react';
+import { ShoppingCart, Menu, X, Zap, Search, User, LogOut, Package, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -82,6 +82,12 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                       طلباتي
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account" className="flex items-center gap-2 cursor-pointer">
+                      <Settings className="w-4 h-4" />
+                      إعدادات الحساب
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={signOut}
@@ -158,6 +164,14 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                 >
                   <Package className="w-4 h-4" />
                   طلباتي
+                </Link>
+                <Link
+                  to="/account"
+                  className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Settings className="w-4 h-4" />
+                  إعدادات الحساب
                 </Link>
                 <button
                   className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium text-destructive flex items-center gap-2 text-right w-full"
