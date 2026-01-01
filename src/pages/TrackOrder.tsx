@@ -14,7 +14,6 @@ import {
   CheckCircle, 
   Clock, 
   XCircle,
-  Phone,
   MapPin,
   Zap,
   ArrowRight
@@ -25,19 +24,20 @@ import { Link } from 'react-router-dom';
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
-interface Order {
+interface TrackedOrder {
   id: string;
   order_number: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_address: string;
   governorate: string;
   delivery_fee: number;
   subtotal: number;
+  discount_amount: number | null;
   total: number;
   status: OrderStatus;
+  payment_method: string;
   payment_confirmed: boolean;
   created_at: string;
+  updated_at: string;
+  items: OrderItem[];
 }
 
 interface OrderItem {
@@ -87,8 +87,7 @@ const TrackOrder: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [order, setOrder] = useState<Order | null>(null);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [order, setOrder] = useState<TrackedOrder | null>(null);
 
   // Check for query param on mount
   useEffect(() => {
@@ -105,32 +104,37 @@ const TrackOrder: React.FC = () => {
     setLoading(true);
     setOrder(null);
 
-    // Search by order number or phone
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .or(`order_number.eq.${query},customer_phone.eq.${query}`)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      // Use edge function to securely fetch order
+      const { data, error } = await supabase.functions.invoke('track-order', {
+        body: { orderNumber: query.trim() }
+      });
 
-    if (error) {
-      toast({ title: "خطأ", description: error.message, variant: "destructive" });
-    } else if (!data) {
+      if (error) {
+        console.error('Track order error:', error);
+        toast({ 
+          title: "خطأ", 
+          description: "حدث خطأ في البحث عن الطلب", 
+          variant: "destructive" 
+        });
+      } else if (data.error) {
+        toast({ 
+          title: "لم يتم العثور على الطلب", 
+          description: data.error,
+          variant: "destructive" 
+        });
+      } else if (data.order) {
+        setOrder(data.order as TrackedOrder);
+      }
+    } catch (err) {
+      console.error('Track order exception:', err);
       toast({ 
-        title: "لم يتم العثور على الطلب", 
-        description: "تأكد من رقم الطلب أو رقم الهاتف",
+        title: "خطأ", 
+        description: "حدث خطأ في الاتصال بالخادم", 
         variant: "destructive" 
       });
-    } else {
-      setOrder(data as Order);
-      // Fetch order items
-      const { data: items } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', data.id);
-      setOrderItems(items || []);
     }
+
     setLoading(false);
   };
 
@@ -176,13 +180,13 @@ const TrackOrder: React.FC = () => {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">تتبع طلبك</h1>
             <p className="text-muted-foreground">
-              أدخل رقم الطلب أو رقم هاتفك لمعرفة حالة طلبك
+              أدخل رقم الطلب لمعرفة حالته
             </p>
           </div>
 
           <form onSubmit={handleSearch} className="flex gap-3 mb-8">
             <Input
-              placeholder="رقم الطلب أو رقم الهاتف..."
+              placeholder="رقم الطلب (مثال: HS-20260101-1234)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1"
@@ -256,29 +260,20 @@ const TrackOrder: React.FC = () => {
                 </div>
               )}
 
-              {/* Order Info */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="bg-card rounded-xl border border-border p-4">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                    <Phone className="w-4 h-4" />
-                    <span className="text-sm">رقم الهاتف</span>
-                  </div>
-                  <p className="font-medium">{order.customer_phone}</p>
+              {/* Delivery Info */}
+              <div className="bg-card rounded-xl border border-border p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-sm">التوصيل إلى</span>
                 </div>
-                <div className="bg-card rounded-xl border border-border p-4">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm">التوصيل إلى</span>
-                  </div>
-                  <p className="font-medium">{order.governorate}</p>
-                </div>
+                <p className="font-medium">{order.governorate}</p>
               </div>
 
               {/* Order Items */}
               <div className="bg-card rounded-2xl border border-border p-6">
                 <h3 className="font-bold mb-4">المنتجات</h3>
                 <div className="space-y-3">
-                  {orderItems.map((item) => (
+                  {order.items.map((item) => (
                     <div key={item.id} className="flex justify-between items-center p-3 bg-muted rounded-lg">
                       <div>
                         <p className="font-medium">{item.product_name}</p>
@@ -298,6 +293,12 @@ const TrackOrder: React.FC = () => {
                     <span className="text-muted-foreground">التوصيل</span>
                     <span>{order.delivery_fee} ج.م</span>
                   </div>
+                  {order.discount_amount && order.discount_amount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>الخصم</span>
+                      <span>-{order.discount_amount} ج.م</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-lg font-bold pt-2">
                     <span>الإجمالي</span>
                     <span className="text-primary">{order.total} ج.م</span>
@@ -321,7 +322,11 @@ const TrackOrder: React.FC = () => {
                       <Clock className="w-6 h-6 text-yellow-600" />
                       <div>
                         <p className="font-medium text-yellow-700">في انتظار تأكيد الدفع</p>
-                        <p className="text-sm text-yellow-600">يرجى التحويل على الرقم المحدد وانتظار التأكيد</p>
+                        <p className="text-sm text-yellow-600">
+                          {order.payment_method === 'cod' 
+                            ? 'الدفع عند الاستلام' 
+                            : 'يرجى التحويل على الرقم المحدد وانتظار التأكيد'}
+                        </p>
                       </div>
                     </>
                   )}
