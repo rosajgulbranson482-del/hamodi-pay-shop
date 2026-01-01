@@ -105,67 +105,44 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
 
     setApplyingCoupon(true);
 
-    const { data: coupon, error } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('code', couponCode.toUpperCase())
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (error || !coupon) {
-      toast({ title: "خطأ", description: "كود الكوبون غير صالح", variant: "destructive" });
-      setApplyingCoupon(false);
-      return;
-    }
-
-    // Check expiry
-    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
-      toast({ title: "خطأ", description: "انتهت صلاحية هذا الكوبون", variant: "destructive" });
-      setApplyingCoupon(false);
-      return;
-    }
-
-    // Check max uses
-    if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
-      toast({ title: "خطأ", description: "تم استنفاد عدد استخدامات هذا الكوبون", variant: "destructive" });
-      setApplyingCoupon(false);
-      return;
-    }
-
-    // Check minimum order
-    if (coupon.min_order_amount && totalPrice < coupon.min_order_amount) {
-      toast({ 
-        title: "خطأ", 
-        description: `الحد الأدنى للطلب ${coupon.min_order_amount} ج.م لاستخدام هذا الكوبون`, 
-        variant: "destructive" 
+    try {
+      // Use edge function to validate coupon securely
+      const { data, error } = await supabase.functions.invoke('validate-coupon', {
+        body: {
+          code: couponCode,
+          orderTotal: totalPrice,
+        }
       });
+
+      if (error) {
+        toast({ title: "خطأ", description: "حدث خطأ في التحقق من الكوبون", variant: "destructive" });
+        setApplyingCoupon(false);
+        return;
+      }
+
+      if (!data.valid) {
+        toast({ title: "خطأ", description: data.error || "كود الكوبون غير صالح", variant: "destructive" });
+        setApplyingCoupon(false);
+        return;
+      }
+
+      setAppliedCoupon({
+        code: data.coupon.code,
+        discount_type: data.coupon.discount_type as 'percentage' | 'fixed',
+        discount_value: data.coupon.discount_value,
+        discount_amount: data.coupon.discount_amount,
+      });
+
+      toast({ 
+        title: "تم تطبيق الكوبون! 🎉", 
+        description: `تم خصم ${data.coupon.discount_amount} ج.م من طلبك` 
+      });
+    } catch (err) {
+      console.error('Coupon validation error:', err);
+      toast({ title: "خطأ", description: "حدث خطأ في التحقق من الكوبون", variant: "destructive" });
+    } finally {
       setApplyingCoupon(false);
-      return;
     }
-
-    // Calculate discount
-    let discount = 0;
-    if (coupon.discount_type === 'percentage') {
-      discount = (totalPrice * coupon.discount_value) / 100;
-    } else {
-      discount = coupon.discount_value;
-    }
-
-    // Don't let discount exceed total
-    discount = Math.min(discount, totalPrice);
-
-    setAppliedCoupon({
-      code: coupon.code,
-      discount_type: coupon.discount_type as 'percentage' | 'fixed',
-      discount_value: coupon.discount_value,
-      discount_amount: discount,
-    });
-
-    toast({ 
-      title: "تم تطبيق الكوبون! 🎉", 
-      description: `تم خصم ${discount} ج.م من طلبك` 
-    });
-    setApplyingCoupon(false);
   };
 
   const removeCoupon = () => {
