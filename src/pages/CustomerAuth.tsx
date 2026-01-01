@@ -34,13 +34,14 @@ const CustomerAuth: React.FC = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        // Check if user is admin - if so, don't redirect here
         setTimeout(async () => {
           const { data: isAdmin } = await supabase.rpc('has_role', {
             _user_id: session.user.id,
             _role: 'admin'
           });
-          if (!isAdmin) {
+          if (isAdmin) {
+            navigate('/admin');
+          } else {
             navigate('/');
           }
           setCheckingAuth(false);
@@ -56,7 +57,9 @@ const CustomerAuth: React.FC = () => {
           _user_id: session.user.id,
           _role: 'admin'
         });
-        if (!isAdmin) {
+        if (isAdmin) {
+          navigate('/admin');
+        } else {
           navigate('/');
         }
       }
