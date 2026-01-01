@@ -324,11 +324,11 @@ ${statusMessage}
                   <TableCell className="font-bold">{order.total} ج.م</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={
-                      order.payment_method === 'cash' 
+                      order.payment_method === 'cash_on_delivery' 
                         ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' 
                         : 'bg-blue-500/10 text-blue-600 border-blue-500/30'
                     }>
-                      {order.payment_method === 'cash' ? 'كاش عند الاستلام' : 'تحويل بنكي'}
+                      {order.payment_method === 'cash_on_delivery' ? 'كاش عند الاستلام' : 'فودافون كاش / انستا باي'}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -408,7 +408,7 @@ ${statusMessage}
                                   <CreditCard className="w-3 h-3" /> طريقة الدفع
                                 </p>
                                 <p className="font-medium">
-                                  {selectedOrder.payment_method === 'cash' ? 'كاش عند الاستلام' : 'تحويل بنكي'}
+                                  {selectedOrder.payment_method === 'cash_on_delivery' ? 'كاش عند الاستلام' : 'فودافون كاش / انستا باي'}
                                 </p>
                               </div>
                             </div>
