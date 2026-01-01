@@ -35,12 +35,9 @@ const Footer: React.FC = () => {
                 <Clock className="w-4 h-4 text-secondary" />
                 <span>متاح 24/7</span>
               </div>
-              <div className="pt-2 space-y-2">
+              <div className="pt-2">
                 <a className="block text-primary-foreground/90 hover:text-primary-foreground underline-offset-4 hover:underline" href="/track">
                   تتبع الطلب
-                </a>
-                <a className="block text-primary-foreground/90 hover:text-primary-foreground underline-offset-4 hover:underline" href="/auth">
-                  دخول المشرف
                 </a>
               </div>
             </div>
