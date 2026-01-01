@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Phone, MapPin, User, MessageSquare, CreditCard, Copy, Check, Wallet, Banknote, Ticket, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/hooks/useAuth';
 import { governorates } from '@/data/governorates';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,7 @@ const paymentMethods = [
 
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const { items, totalPrice, clearCart } = useCart();
+  const { user, profile, isAuthenticated } = useAuth();
   const { toast } = useToast();
   
   const [step, setStep] = useState(1);
@@ -68,6 +70,23 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  // Pre-fill form with profile data when authenticated
+  useEffect(() => {
+    if (isAuthenticated && profile) {
+      setFormData(prev => ({
+        ...prev,
+        name: profile.full_name || prev.name,
+        phone: profile.phone || prev.phone,
+        address: profile.default_address || prev.address,
+        governorate: profile.default_governorate || prev.governorate,
+      }));
+      // Auto-verify phone for authenticated users
+      if (profile.phone) {
+        setIsVerified(true);
+      }
+    }
+  }, [isAuthenticated, profile]);
 
   const selectedGovernorate = governorates.find(g => g.id === formData.governorate);
   const deliveryFee = selectedGovernorate?.deliveryFee || 0;
@@ -258,6 +277,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         order_number: 'temp',
         coupon_code: appliedCoupon?.code || null,
         discount_amount: discountAmount,
+        user_id: user?.id || null, // Link order to authenticated user
       }])
       .select()
       .single();

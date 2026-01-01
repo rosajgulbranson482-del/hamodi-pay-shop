@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Menu, X, Zap, Search } from 'lucide-react';
+import { ShoppingCart, Menu, X, Zap, Search, User, LogOut, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import CartDrawer from '@/components/CartDrawer';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface HeaderProps {
   onCartClick?: () => void;
@@ -12,6 +20,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
   const { totalItems } = useCart();
+  const { user, profile, isAuthenticated, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -56,13 +65,41 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             </a>
           </nav>
 
-          {/* Cart & Mobile Menu */}
+          {/* Cart & User Menu */}
           <div className="flex items-center gap-2">
-            <Link to="/auth" className="hidden sm:block">
-              <Button variant="ghost" size="sm">
-                دخول المشرف
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="hidden sm:flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    <span className="max-w-[100px] truncate">{profile?.full_name || 'حسابي'}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/my-orders" className="flex items-center gap-2 cursor-pointer">
+                      <Package className="w-4 h-4" />
+                      طلباتي
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={signOut}
+                    className="text-destructive focus:text-destructive cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 ml-2" />
+                    تسجيل الخروج
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/login" className="hidden sm:block">
+                <Button variant="ghost" size="sm">
+                  <User className="w-4 h-4 ml-2" />
+                  تسجيل الدخول
+                </Button>
+              </Link>
+            )}
 
             <Button
               variant="outline"
@@ -112,13 +149,34 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
               <Search className="w-4 h-4" />
               تتبع الطلب
             </Link>
-            <Link
-              to="/auth"
-              className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              دخول المشرف
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/my-orders"
+                  className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Package className="w-4 h-4" />
+                  طلباتي
+                </Link>
+                <button
+                  className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium text-destructive flex items-center gap-2 text-right w-full"
+                  onClick={() => { signOut(); setIsMenuOpen(false); }}
+                >
+                  <LogOut className="w-4 h-4" />
+                  تسجيل الخروج
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <User className="w-4 h-4" />
+                تسجيل الدخول
+              </Link>
+            )}
             <a
               href="#contact"
               className="px-4 py-2 rounded-lg hover:bg-accent transition-colors font-medium"
