@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
+import ProductReviews from '@/components/ProductReviews';
 
 interface ProductImage {
   id: string;
@@ -449,66 +450,7 @@ const ProductDetails = () => {
         </div>
 
         {/* Customer Reviews Section */}
-        <section className="mt-16">
-          <h2 className="text-2xl font-bold text-foreground mb-6">تقييمات العملاء</h2>
-          
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Overall Rating */}
-            <div className="bg-card border border-border rounded-2xl p-6 text-center">
-              <div className="text-5xl font-bold text-primary mb-2">4.5</div>
-              <div className="flex justify-center mb-2">
-                {renderStars(4.5)}
-              </div>
-              <p className="text-muted-foreground">بناءً على 128 تقييم</p>
-            </div>
-            
-            {/* Rating Breakdown */}
-            <div className="md:col-span-2 bg-card border border-border rounded-2xl p-6 space-y-3">
-              {[5, 4, 3, 2, 1].map((stars) => {
-                const percentage = stars === 5 ? 65 : stars === 4 ? 25 : stars === 3 ? 7 : stars === 2 ? 2 : 1;
-                return (
-                  <div key={stars} className="flex items-center gap-3">
-                    <span className="w-6 text-sm font-medium">{stars}</span>
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-yellow-400 rounded-full transition-all"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                    <span className="w-10 text-sm text-muted-foreground">{percentage}%</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          
-          {/* Sample Reviews */}
-          <div className="grid md:grid-cols-2 gap-6 mt-6">
-            {[
-              { name: "أحمد محمد", rating: 5, comment: "منتج ممتاز والتوصيل سريع جداً. أنصح به بشدة!", date: "منذ 3 أيام" },
-              { name: "سارة علي", rating: 4, comment: "جودة عالية وسعر مناسب. سعيدة جداً بالشراء.", date: "منذ أسبوع" },
-              { name: "محمد خالد", rating: 5, comment: "أفضل منتج اشتريته هذا العام. شكراً للمتجر!", date: "منذ 2 أسبوع" },
-              { name: "فاطمة حسن", rating: 4, comment: "منتج رائع والتغليف ممتاز. التوصيل كان سريع.", date: "منذ شهر" },
-            ].map((review, idx) => (
-              <div key={idx} className="bg-card border border-border rounded-xl p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-bold">
-                      {review.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{review.name}</p>
-                      <p className="text-xs text-muted-foreground">{review.date}</p>
-                    </div>
-                  </div>
-                  {renderStars(review.rating)}
-                </div>
-                <p className="text-muted-foreground">{review.comment}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        <ProductReviews productId={product.id} />
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
