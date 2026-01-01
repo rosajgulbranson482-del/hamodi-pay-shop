@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import Auth from "./pages/Auth";
 import CustomerAuth from "./pages/CustomerAuth";
 import Admin from "./pages/Admin";
 import TrackOrder from "./pages/TrackOrder";
@@ -26,7 +25,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/product/:id" element={<ProductDetails />} />
-            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth" element={<CustomerAuth />} />
             <Route path="/login" element={<CustomerAuth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/track" element={<TrackOrder />} />
