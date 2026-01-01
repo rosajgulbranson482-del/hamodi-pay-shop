@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,14 +84,23 @@ const statusSteps: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipp
 
 const TrackOrder: React.FC = () => {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+  // Check for query param on mount
+  useEffect(() => {
+    const query = searchParams.get('q');
+    if (query) {
+      setSearchQuery(query);
+      searchOrder(query);
+    }
+  }, [searchParams]);
+
+  const searchOrder = async (query: string) => {
+    if (!query.trim()) return;
 
     setLoading(true);
     setOrder(null);
@@ -99,7 +109,7 @@ const TrackOrder: React.FC = () => {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .or(`order_number.eq.${searchQuery},customer_phone.eq.${searchQuery}`)
+      .or(`order_number.eq.${query},customer_phone.eq.${query}`)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -122,6 +132,11 @@ const TrackOrder: React.FC = () => {
       setOrderItems(items || []);
     }
     setLoading(false);
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    searchOrder(searchQuery);
   };
 
   const currentStepIndex = order ? statusSteps.indexOf(order.status) : -1;

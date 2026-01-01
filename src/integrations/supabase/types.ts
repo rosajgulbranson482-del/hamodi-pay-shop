@@ -120,6 +120,7 @@ export type Database = {
           subtotal: number
           total: number
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           coupon_code?: string | null
@@ -139,6 +140,7 @@ export type Database = {
           subtotal: number
           total: number
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           coupon_code?: string | null
@@ -158,6 +160,7 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -234,6 +237,36 @@ export type Database = {
           original_price?: number | null
           price?: number
           stock_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          default_address: string | null
+          default_governorate: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_address?: string | null
+          default_governorate?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_address?: string | null
+          default_governorate?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
