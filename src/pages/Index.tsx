@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
+import SpecialOffers from '@/components/SpecialOffers';
 import ProductGrid from '@/components/ProductGrid';
 import CartDrawer from '@/components/CartDrawer';
 import CheckoutModal from '@/components/CheckoutModal';
@@ -34,6 +35,7 @@ const IndexContent: React.FC = () => {
         
         <main className="flex-1">
           <Hero />
+          <SpecialOffers />
           <ProductGrid />
         </main>
 
