@@ -51,6 +51,8 @@ interface OrderItem {
   product_name: string;
   product_price: number;
   quantity: number;
+  product_id: string | null;
+  product_image: string | null;
 }
 
 const statusColors: Record<OrderStatus, string> = {
@@ -440,11 +442,19 @@ const AdminOrders: React.FC = () => {
     setLoadingItems(true);
     const { data, error } = await supabase
       .from('order_items')
-      .select('*')
+      .select('*, products:product_id(image)')
       .eq('order_id', orderId);
 
-    if (!error) {
-      setOrderItems(data || []);
+    if (!error && data) {
+      const itemsWithImages = data.map((item: any) => ({
+        id: item.id,
+        product_name: item.product_name,
+        product_price: item.product_price,
+        quantity: item.quantity,
+        product_id: item.product_id,
+        product_image: item.products?.image || null,
+      }));
+      setOrderItems(itemsWithImages);
     }
     setLoadingItems(false);
   };
@@ -910,9 +920,23 @@ ${statusMessage}
                               ) : (
                                 <div className="space-y-2">
                                   {orderItems.map((item) => (
-                                    <div key={item.id} className="flex justify-between items-center p-2 bg-muted rounded-lg">
-                                      <span>{item.product_name} × {item.quantity}</span>
-                                      <span className="font-medium">{item.product_price * item.quantity} ج.م</span>
+                                    <div key={item.id} className="flex items-center gap-3 p-2 bg-muted rounded-lg">
+                                      {item.product_image ? (
+                                        <img 
+                                          src={item.product_image} 
+                                          alt={item.product_name}
+                                          className="w-12 h-12 object-cover rounded-lg border border-border"
+                                        />
+                                      ) : (
+                                        <div className="w-12 h-12 bg-muted-foreground/10 rounded-lg flex items-center justify-center">
+                                          <span className="text-xs text-muted-foreground">لا صورة</span>
+                                        </div>
+                                      )}
+                                      <div className="flex-1">
+                                        <p className="font-medium text-sm">{item.product_name}</p>
+                                        <p className="text-xs text-muted-foreground">الكمية: {item.quantity}</p>
+                                      </div>
+                                      <span className="font-bold text-primary">{item.product_price * item.quantity} ج.م</span>
                                     </div>
                                   ))}
                                 </div>
