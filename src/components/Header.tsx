@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import CartDrawer from '@/components/CartDrawer';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import SearchDialog from '@/components/SearchDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +27,7 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
   const { favoriteCount } = useFavorites();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handleCartClick = () => {
     if (onCartClick) {
@@ -56,11 +58,17 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="text-foreground hover:text-primary transition-colors font-medium flex items-center gap-1"
+            >
+              <Search className="w-4 h-4" />
+              بحث
+            </button>
             <a href="#products" className="text-foreground hover:text-primary transition-colors font-medium">
               المنتجات
             </a>
             <Link to="/track" className="text-foreground hover:text-primary transition-colors font-medium flex items-center gap-1">
-              <Search className="w-4 h-4" />
               تتبع الطلب
             </Link>
             <a href="#contact" className="text-foreground hover:text-primary transition-colors font-medium">
@@ -155,6 +163,13 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
           )}
         >
           <div className="flex flex-col gap-1 pt-2">
+            <button
+              onClick={() => { setIsSearchOpen(true); setIsMenuOpen(false); }}
+              className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2 text-sm text-right w-full"
+            >
+              <Search className="w-4 h-4" />
+              بحث عن منتج
+            </button>
             <a
               href="#products"
               className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium text-sm"
@@ -167,7 +182,6 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
               className="px-4 py-3 rounded-lg hover:bg-accent transition-colors font-medium flex items-center gap-2 text-sm"
               onClick={() => setIsMenuOpen(false)}
             >
-              <Search className="w-4 h-4" />
               تتبع الطلب
             </Link>
             {isAuthenticated ? (
@@ -234,6 +248,9 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
       {!onCartClick && (
         <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
       )}
+
+      {/* Search Dialog */}
+      <SearchDialog isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </header>
   );
 };
