@@ -85,6 +85,36 @@ export type Database = {
           },
         ]
       }
+      governorates: {
+        Row: {
+          created_at: string
+          delivery_days: string
+          delivery_fee: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_days?: string
+          delivery_fee?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_days?: string
+          delivery_fee?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string

@@ -7,10 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
-import { governorates } from '@/data/governorates';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+
+interface Governorate {
+  id: string;
+  name: string;
+  delivery_fee: number;
+  delivery_days: string;
+}
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -54,6 +60,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -71,6 +78,25 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  // Fetch governorates from database
+  useEffect(() => {
+    const fetchGovernorates = async () => {
+      const { data } = await supabase
+        .from('governorates')
+        .select('id, name, delivery_fee, delivery_days')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (data) {
+        setGovernorates(data);
+      }
+    };
+    
+    if (isOpen) {
+      fetchGovernorates();
+    }
+  }, [isOpen]);
 
   // Pre-fill form with profile data when authenticated
   useEffect(() => {
@@ -90,7 +116,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   }, [isAuthenticated, profile]);
 
   const selectedGovernorate = governorates.find(g => g.id === formData.governorate);
-  const deliveryFee = selectedGovernorate?.deliveryFee || 0;
+  const deliveryFee = selectedGovernorate?.delivery_fee || 0;
   const discountAmount = appliedCoupon?.discount_amount || 0;
   const finalTotal = Math.max(0, totalPrice + deliveryFee - discountAmount);
 
@@ -447,7 +473,7 @@ ${orderItemsText}
                         <div className="flex items-center justify-between w-full gap-4">
                           <span>{gov.name}</span>
                           <span className="text-muted-foreground text-sm">
-                            توصيل: {gov.deliveryFee} ج.م ({gov.deliveryDays})
+                            توصيل: {gov.delivery_fee} ج.م ({gov.delivery_days})
                           </span>
                         </div>
                       </SelectItem>
@@ -672,7 +698,7 @@ ${orderItemsText}
                   <li>• قم بتحويل المبلغ الإجمالي على الرقم المذكور</li>
                   <li>• احتفظ بصورة إيصال التحويل</li>
                   <li>• سنتواصل معك لتأكيد الطلب خلال ساعات</li>
-                  <li>• التوصيل خلال {selectedGovernorate?.deliveryDays || '2-5 أيام'}</li>
+                  <li>• التوصيل خلال {selectedGovernorate?.delivery_days || '2-5 أيام'}</li>
                 </ul>
               </div>
 
