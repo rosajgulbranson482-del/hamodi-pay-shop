@@ -19,7 +19,18 @@ import {
   DialogTitle,
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard, Download, Filter, X, Calendar, Search, Printer } from 'lucide-react';
+import { Eye, Loader2, RefreshCw, Check, Phone, MapPin, Mail, Send, MessageCircle, CreditCard, Download, Filter, X, Calendar, Search, Printer, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import * as XLSX from 'xlsx';
 import { format, startOfDay, endOfDay, subDays, isWithinInterval } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -594,6 +605,31 @@ ${statusMessage}
     }
   };
 
+  const deleteOrder = async (orderId: string) => {
+    // First delete order items
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (itemsError) {
+      toast({ title: "خطأ", description: itemsError.message, variant: "destructive" });
+      return;
+    }
+
+    // Then delete the order
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
+
+    if (error) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "تم الحذف", description: "تم حذف الطلب بنجاح" });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -782,19 +818,20 @@ ${statusMessage}
                     {format(new Date(order.created_at), 'dd MMM yyyy', { locale: ar })}
                   </TableCell>
                   <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            fetchOrderItems(order.id);
-                          }}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </DialogTrigger>
+                    <div className="flex items-center gap-1">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              fetchOrderItems(order.id);
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </DialogTrigger>
                       <DialogContent className="max-w-lg" dir="rtl">
                         <DialogHeader>
                           <DialogTitle>تفاصيل الطلب {selectedOrder?.order_number}</DialogTitle>
@@ -973,6 +1010,36 @@ ${statusMessage}
                         )}
                       </DialogContent>
                     </Dialog>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent dir="rtl">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>حذف الطلب</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            هل أنت متأكد من حذف الطلب رقم {order.order_number}؟ لا يمكن التراجع عن هذا الإجراء.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="gap-2">
+                          <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteOrder(order.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            حذف
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
