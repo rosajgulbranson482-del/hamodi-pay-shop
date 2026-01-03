@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { Phone, MapPin, User, MessageSquare, Copy, Check, Wallet, Banknote, Ticket, Loader2, Mail, ArrowRight, ShoppingBag, Trash2, Plus, Minus } from 'lucide-react';
+import { Phone, MapPin, User, MessageSquare, Copy, Check, Wallet, Banknote, Ticket, Loader2, Mail, ArrowRight, ShoppingBag, Trash2, Plus, Minus, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -52,7 +53,7 @@ const paymentMethods = [
 const CheckoutContent: React.FC = () => {
   const navigate = useNavigate();
   const { items, totalPrice, clearCart, removeFromCart, updateQuantity } = useCart();
-  const { user, profile, isAuthenticated } = useAuth();
+  const { user, profile, isAuthenticated, updateProfile } = useAuth();
   const { toast } = useToast();
   
   const [step, setStep] = useState(1);
@@ -76,6 +77,8 @@ const CheckoutContent: React.FC = () => {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -177,6 +180,33 @@ const CheckoutContent: React.FC = () => {
   const removeCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode('');
+  };
+
+  const handleSaveAsDefault = async () => {
+    if (!isAuthenticated || !formData.address || !formData.governorate) return;
+    
+    setSavingAddress(true);
+    const selectedGov = governorates.find(g => g.id === formData.governorate);
+    
+    const { error } = await updateProfile({
+      default_address: formData.address,
+      default_governorate: selectedGov?.name || null,
+    });
+    
+    setSavingAddress(false);
+    
+    if (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء حفظ العنوان",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "تم الحفظ",
+        description: "تم حفظ العنوان كعنوان افتراضي",
+      });
+    }
   };
 
   const sendVerificationCode = () => {
@@ -491,6 +521,42 @@ ${orderItemsText}
                       onChange={(e) => handleInputChange('address', e.target.value)}
                       rows={3}
                     />
+                    
+                    {/* Save as Default Address - Only for authenticated users */}
+                    {isAuthenticated && (
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="saveAsDefault"
+                            checked={saveAsDefault}
+                            onCheckedChange={(checked) => setSaveAsDefault(checked as boolean)}
+                          />
+                          <label
+                            htmlFor="saveAsDefault"
+                            className="text-sm text-muted-foreground cursor-pointer"
+                          >
+                            حفظ كعنوان افتراضي
+                          </label>
+                        </div>
+                        {saveAsDefault && formData.address && formData.governorate && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSaveAsDefault}
+                            disabled={savingAddress}
+                            className="gap-2"
+                          >
+                            {savingAddress ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            حفظ الآن
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Payment Method Selection */}
