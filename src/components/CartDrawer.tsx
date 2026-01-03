@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { cn } from '@/lib/utils';
-import CheckoutModal from '@/components/CheckoutModal';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -12,14 +12,15 @@ interface CartDrawerProps {
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) => {
+  const navigate = useNavigate();
   const { items, removeFromCart, updateQuantity, totalPrice, totalItems } = useCart();
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   const handleCheckout = () => {
     if (onCheckout) {
       onCheckout();
     } else {
-      setIsCheckoutOpen(true);
+      onClose();
+      navigate('/checkout');
     }
   };
 
@@ -141,10 +142,6 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
         )}
       </div>
 
-      {/* Checkout Modal for standalone usage */}
-      {!onCheckout && (
-        <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} />
-      )}
     </>
   );
 };
