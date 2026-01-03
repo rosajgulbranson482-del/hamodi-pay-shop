@@ -1,73 +1,91 @@
-# Welcome to your Lovable project
+# 🛒 متجر حمودي للتسوق الإلكتروني
 
-## Project info
+متجر إلكتروني متكامل مبني بأحدث التقنيات لتوفير تجربة تسوق سلسة ومميزة.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## ✨ المميزات
 
-## How can I edit this code?
+### 🛍️ للعملاء
+- **تصفح المنتجات**: عرض المنتجات مع صور متعددة وأوصاف تفصيلية
+- **البحث**: البحث السريع عن المنتجات بالاسم
+- **سلة التسوق**: إضافة وإدارة المنتجات بسهولة
+- **المفضلة**: حفظ المنتجات المفضلة للعودة إليها لاحقاً
+- **تتبع الطلبات**: متابعة حالة الطلب من الإرسال حتى التسليم
+- **التقييمات**: إضافة تقييمات ومراجعات للمنتجات
+- **كوبونات الخصم**: دعم كوبونات الخصم عند الشراء
 
-There are several ways of editing your application.
+### 🔧 لوحة التحكم (للمسؤولين)
+- **إدارة المنتجات**: إضافة، تعديل، وحذف المنتجات
+- **إدارة الطلبات**: عرض وتحديث حالة الطلبات
+- **إدارة المحافظات**: تحديد مناطق التوصيل ورسوم الشحن
+- **إدارة الكوبونات**: إنشاء وإدارة كوبونات الخصم
+- **إدارة التقييمات**: مراجعة وإدارة تقييمات العملاء
+- **الإحصائيات**: عرض إحصائيات المبيعات والطلبات
 
-**Use Lovable**
+## 🛠️ التقنيات المستخدمة
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- **Frontend**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS + shadcn/ui
+- **State Management**: React Context + TanStack Query
+- **Backend**: Supabase (قاعدة بيانات + مصادقة + Edge Functions)
+- **Icons**: Lucide React
+- **Routing**: React Router DOM
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🚀 التشغيل المحلي
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+```bash
+# استنساخ المشروع
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
+# الانتقال لمجلد المشروع
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
-npm i
+# تثبيت المتطلبات
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# تشغيل السيرفر
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 📁 هيكل المشروع
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+src/
+├── components/          # المكونات القابلة لإعادة الاستخدام
+│   ├── admin/          # مكونات لوحة التحكم
+│   └── ui/             # مكونات shadcn/ui
+├── context/            # React Context (السلة)
+├── hooks/              # Custom Hooks
+├── pages/              # صفحات التطبيق
+├── integrations/       # تكامل Supabase
+└── data/               # البيانات الثابتة
 
-**Use GitHub Codespaces**
+supabase/
+├── functions/          # Edge Functions
+└── migrations/         # قاعدة البيانات
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 📱 الصفحات
 
-## What technologies are used for this project?
+| الصفحة | المسار | الوصف |
+|--------|--------|-------|
+| الرئيسية | `/` | عرض المنتجات والعروض |
+| تفاصيل المنتج | `/product/:id` | تفاصيل منتج محدد |
+| المفضلة | `/favorites` | المنتجات المحفوظة |
+| طلباتي | `/my-orders` | طلبات العميل |
+| تتبع الطلب | `/track-order` | تتبع حالة الطلب |
+| لوحة التحكم | `/admin` | إدارة المتجر |
+| تسجيل الدخول | `/auth` | تسجيل الدخول والتسجيل |
 
-This project is built with:
+## 🔐 الأمان
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- تشفير كلمات المرور
+- حماية API باستخدام Row Level Security (RLS)
+- التحقق من صلاحيات المستخدم
 
-## How can I deploy this project?
+## 📄 الرخصة
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+هذا المشروع مُرخص تحت رخصة MIT.
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+صُنع بـ ❤️ باستخدام [Lovable](https://lovable.dev)

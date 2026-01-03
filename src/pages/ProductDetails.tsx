@@ -24,6 +24,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
+import CartDrawer from '@/components/CartDrawer';
 
 interface ProductImage {
   id: string;
@@ -56,6 +57,7 @@ const ProductDetailsContent = () => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   
   const isInCart = product ? items.some(item => item.id === product.id) : false;
   const isFav = product ? isFavorite(product.id) : false;
@@ -205,6 +207,10 @@ const ProductDetailsContent = () => {
     return null;
   }
 
+  const handleOpenCart = () => {
+    setIsCartOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
@@ -212,7 +218,7 @@ const ProductDetailsContent = () => {
         <meta name="description" content={product.description || `اشتر ${product.name} بأفضل سعر`} />
       </Helmet>
       
-      <Header />
+      <Header onCartClick={handleOpenCart} />
       
       <main className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
@@ -471,6 +477,8 @@ const ProductDetailsContent = () => {
       </main>
       
       <Footer />
+      
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </div>
   );
 };
