@@ -14,6 +14,7 @@ import ProductDetails from "./pages/ProductDetails";
 import MyOrders from "./pages/MyOrders";
 import AccountSettings from "./pages/AccountSettings";
 import Favorites from "./pages/Favorites";
+import Checkout from "./pages/Checkout";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/product/:id" element={<ProductDetails />} />
+              <Route path="/checkout" element={<Checkout />} />
               <Route path="/auth" element={<CustomerAuth />} />
               <Route path="/login" element={<CustomerAuth />} />
               <Route path="/admin" element={<Admin />} />
