@@ -104,22 +104,27 @@ const CheckoutContent: React.FC = () => {
     fetchGovernorates();
   }, []);
 
-  // Pre-fill form with profile data when authenticated
+  // Pre-fill form with profile data when authenticated and governorates are loaded
   useEffect(() => {
-    if (isAuthenticated && profile) {
+    if (isAuthenticated && profile && governorates.length > 0) {
+      // Find governorate ID by name
+      const matchedGovernorate = governorates.find(
+        g => g.name === profile.default_governorate
+      );
+      
       setFormData(prev => ({
         ...prev,
         name: profile.full_name || prev.name,
         phone: profile.phone || prev.phone,
         address: profile.default_address || prev.address,
-        governorate: profile.default_governorate || prev.governorate,
+        governorate: matchedGovernorate?.id || prev.governorate,
       }));
       // Auto-verify phone for authenticated users
       if (profile.phone) {
         setIsVerified(true);
       }
     }
-  }, [isAuthenticated, profile]);
+  }, [isAuthenticated, profile, governorates]);
 
   const selectedGovernorate = governorates.find(g => g.id === formData.governorate);
   const deliveryFee = selectedGovernorate?.delivery_fee || 0;
