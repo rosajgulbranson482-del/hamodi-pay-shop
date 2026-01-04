@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart
+  PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { 
-  TrendingUp, ShoppingCart, DollarSign, Package, Users, 
+  TrendingUp, ShoppingCart, DollarSign, 
   Calendar, CheckCircle, Clock, XCircle, Truck
 } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
@@ -32,101 +32,118 @@ interface OrderItem {
 }
 
 const AdminStats: React.FC = () => {
-  // Fetch orders
+  // Fetch orders with staleTime for caching
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['admin-stats-orders'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('id, total, status, created_at, governorate, payment_method')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as Order[];
     },
+    staleTime: 30000, // Cache for 30 seconds
   });
 
-  // Fetch order items for top products
+  // Fetch order items only for top products calculation
   const { data: orderItems = [], isLoading: itemsLoading } = useQuery({
     queryKey: ['admin-stats-items'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('order_items')
-        .select('*');
+        .select('id, product_name, quantity, product_price');
       
       if (error) throw error;
       return data as OrderItem[];
     },
+    staleTime: 30000,
   });
 
-  // Calculate statistics
-  const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
-  const totalOrders = orders.length;
-  const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
-  const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
-  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  // Memoize all calculations
+  const stats = useMemo(() => {
+    const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
+    const totalOrders = orders.length;
+    const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
+    const pendingOrders = orders.filter(o => o.status === 'pending').length;
+    const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
+    const shippedOrders = orders.filter(o => o.status === 'shipped').length;
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-  // Daily revenue for last 7 days
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = subDays(new Date(), 6 - i);
-    const dayOrders = orders.filter(order => {
-      const orderDate = new Date(order.created_at);
-      return orderDate >= startOfDay(date) && orderDate <= endOfDay(date);
+    return { totalRevenue, totalOrders, deliveredOrders, pendingOrders, cancelledOrders, shippedOrders, avgOrderValue };
+  }, [orders]);
+
+  // Memoize last 7 days data
+  const last7Days = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = subDays(new Date(), 6 - i);
+      const dayOrders = orders.filter(order => {
+        const orderDate = new Date(order.created_at);
+        return orderDate >= startOfDay(date) && orderDate <= endOfDay(date);
+      });
+      return {
+        date: format(date, 'EEE', { locale: ar }),
+        fullDate: format(date, 'dd/MM', { locale: ar }),
+        revenue: dayOrders.reduce((sum, o) => sum + Number(o.total), 0),
+        orders: dayOrders.length,
+      };
     });
-    return {
-      date: format(date, 'EEE', { locale: ar }),
-      fullDate: format(date, 'dd/MM', { locale: ar }),
-      revenue: dayOrders.reduce((sum, o) => sum + Number(o.total), 0),
-      orders: dayOrders.length,
-    };
-  });
+  }, [orders]);
 
-  // Status distribution
-  const statusData = [
-    { name: 'قيد الانتظار', value: orders.filter(o => o.status === 'pending').length, color: 'hsl(var(--chart-1))' },
-    { name: 'مؤكد', value: orders.filter(o => o.status === 'confirmed').length, color: 'hsl(var(--chart-2))' },
-    { name: 'قيد التجهيز', value: orders.filter(o => o.status === 'processing').length, color: 'hsl(var(--chart-3))' },
-    { name: 'تم الشحن', value: orders.filter(o => o.status === 'shipped').length, color: 'hsl(var(--chart-4))' },
-    { name: 'تم التوصيل', value: orders.filter(o => o.status === 'delivered').length, color: 'hsl(var(--chart-5))' },
-    { name: 'ملغي', value: orders.filter(o => o.status === 'cancelled').length, color: 'hsl(var(--destructive))' },
-  ].filter(item => item.value > 0);
+  // Memoize status data
+  const statusData = useMemo(() => {
+    return [
+      { name: 'قيد الانتظار', value: orders.filter(o => o.status === 'pending').length, color: 'hsl(var(--chart-1))' },
+      { name: 'مؤكد', value: orders.filter(o => o.status === 'confirmed').length, color: 'hsl(var(--chart-2))' },
+      { name: 'قيد التجهيز', value: orders.filter(o => o.status === 'processing').length, color: 'hsl(var(--chart-3))' },
+      { name: 'تم الشحن', value: orders.filter(o => o.status === 'shipped').length, color: 'hsl(var(--chart-4))' },
+      { name: 'تم التوصيل', value: orders.filter(o => o.status === 'delivered').length, color: 'hsl(var(--chart-5))' },
+      { name: 'ملغي', value: orders.filter(o => o.status === 'cancelled').length, color: 'hsl(var(--destructive))' },
+    ].filter(item => item.value > 0);
+  }, [orders]);
 
-  // Top governorates
-  const governorateStats = orders.reduce((acc, order) => {
-    acc[order.governorate] = (acc[order.governorate] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  // Memoize top governorates
+  const topGovernorates = useMemo(() => {
+    const governorateStats = orders.reduce((acc, order) => {
+      acc[order.governorate] = (acc[order.governorate] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
-  const topGovernorates = Object.entries(governorateStats)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([name, count]) => ({ name, count }));
+    return Object.entries(governorateStats)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count }));
+  }, [orders]);
 
-  // Top products
-  const productStats = orderItems.reduce((acc, item) => {
-    acc[item.product_name] = (acc[item.product_name] || 0) + item.quantity;
-    return acc;
-  }, {} as Record<string, number>);
+  // Memoize top products
+  const topProducts = useMemo(() => {
+    const productStats = orderItems.reduce((acc, item) => {
+      acc[item.product_name] = (acc[item.product_name] || 0) + item.quantity;
+      return acc;
+    }, {} as Record<string, number>);
 
-  const topProducts = Object.entries(productStats)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([name, quantity]) => ({ name: name.length > 20 ? name.slice(0, 20) + '...' : name, quantity }));
+    return Object.entries(productStats)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([name, quantity]) => ({ name: name.length > 20 ? name.slice(0, 20) + '...' : name, quantity }));
+  }, [orderItems]);
 
-  // Payment methods
-  const paymentData = [
-    { 
-      name: 'كاش عند الاستلام', 
-      value: orders.filter(o => o.payment_method === 'cash_on_delivery').length,
-      color: 'hsl(var(--chart-1))'
-    },
-    { 
-      name: 'فودافون كاش', 
-      value: orders.filter(o => o.payment_method === 'vodafone_cash').length,
-      color: 'hsl(var(--chart-2))'
-    },
-  ].filter(item => item.value > 0);
+  // Memoize payment data
+  const paymentData = useMemo(() => {
+    return [
+      { 
+        name: 'كاش عند الاستلام', 
+        value: orders.filter(o => o.payment_method === 'cash_on_delivery').length,
+        color: 'hsl(var(--chart-1))'
+      },
+      { 
+        name: 'فودافون كاش', 
+        value: orders.filter(o => o.payment_method === 'vodafone_cash').length,
+        color: 'hsl(var(--chart-2))'
+      },
+    ].filter(item => item.value > 0);
+  }, [orders]);
 
   if (ordersLoading || itemsLoading) {
     return (
@@ -163,7 +180,7 @@ const AdminStats: React.FC = () => {
               <div>
                 <p className="text-xs text-muted-foreground">إجمالي الإيرادات</p>
                 <p className="text-xl md:text-2xl font-bold text-primary">
-                  {totalRevenue.toLocaleString()}
+                  {stats.totalRevenue.toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">ج.م</p>
               </div>
@@ -180,7 +197,7 @@ const AdminStats: React.FC = () => {
               <div>
                 <p className="text-xs text-muted-foreground">إجمالي الطلبات</p>
                 <p className="text-xl md:text-2xl font-bold text-blue-600">
-                  {totalOrders}
+                  {stats.totalOrders}
                 </p>
                 <p className="text-xs text-muted-foreground">طلب</p>
               </div>
@@ -197,7 +214,7 @@ const AdminStats: React.FC = () => {
               <div>
                 <p className="text-xs text-muted-foreground">تم التوصيل</p>
                 <p className="text-xl md:text-2xl font-bold text-green-600">
-                  {deliveredOrders}
+                  {stats.deliveredOrders}
                 </p>
                 <p className="text-xs text-muted-foreground">طلب</p>
               </div>
@@ -214,7 +231,7 @@ const AdminStats: React.FC = () => {
               <div>
                 <p className="text-xs text-muted-foreground">متوسط الطلب</p>
                 <p className="text-xl md:text-2xl font-bold text-amber-600">
-                  {Math.round(avgOrderValue).toLocaleString()}
+                  {Math.round(stats.avgOrderValue).toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">ج.م</p>
               </div>
@@ -235,7 +252,7 @@ const AdminStats: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">قيد الانتظار</p>
-              <p className="text-lg font-bold">{pendingOrders}</p>
+              <p className="text-lg font-bold">{stats.pendingOrders}</p>
             </div>
           </CardContent>
         </Card>
@@ -246,7 +263,7 @@ const AdminStats: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">قيد الشحن</p>
-              <p className="text-lg font-bold">{orders.filter(o => o.status === 'shipped').length}</p>
+              <p className="text-lg font-bold">{stats.shippedOrders}</p>
             </div>
           </CardContent>
         </Card>
@@ -257,7 +274,7 @@ const AdminStats: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">ملغي</p>
-              <p className="text-lg font-bold">{cancelledOrders}</p>
+              <p className="text-lg font-bold">{stats.cancelledOrders}</p>
             </div>
           </CardContent>
         </Card>
@@ -469,24 +486,18 @@ const AdminStats: React.FC = () => {
       {paymentData.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">طرق الدفع المستخدمة</CardTitle>
+            <CardTitle className="text-base">طرق الدفع</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4 justify-center">
-              {paymentData.map((method, index) => (
-                <div 
-                  key={index} 
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg bg-muted/50"
-                >
+              {paymentData.map((item, index) => (
+                <div key={index} className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
                   <div 
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: method.color }}
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-sm">{method.name}</span>
-                  <Badge>{method.value} طلب</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    ({totalOrders > 0 ? Math.round((method.value / totalOrders) * 100) : 0}%)
-                  </span>
+                  <span className="text-sm font-medium">{item.name}</span>
+                  <Badge variant="secondary">{item.value}</Badge>
                 </div>
               ))}
             </div>

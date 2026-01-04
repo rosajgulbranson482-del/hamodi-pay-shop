@@ -93,6 +93,8 @@ const statusMessages: Record<OrderStatus, string> = {
   cancelled: 'نأسف، تم إلغاء طلبك. تواصل معنا لأي استفسار',
 };
 
+const ORDERS_PER_PAGE = 20;
+
 const AdminOrders: React.FC = () => {
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -109,6 +111,9 @@ const AdminOrders: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [customDateFrom, setCustomDateFrom] = useState<string>('');
   const [customDateTo, setCustomDateTo] = useState<string>('');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filter orders
   const filteredOrders = orders.filter(order => {
@@ -166,9 +171,22 @@ const AdminOrders: React.FC = () => {
     setDateFilter('all');
     setCustomDateFrom('');
     setCustomDateTo('');
+    setCurrentPage(1);
   };
 
   const hasActiveFilters = searchQuery.trim() !== '' || statusFilter !== 'all' || dateFilter !== 'all';
+  
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredOrders.length / ORDERS_PER_PAGE);
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * ORDERS_PER_PAGE,
+    currentPage * ORDERS_PER_PAGE
+  );
+  
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, dateFilter, customDateFrom, customDateTo]);
 
   const printInvoice = (order: Order, items: OrderItem[]) => {
     const printWindow = window.open('', '_blank');
@@ -732,7 +750,8 @@ ${statusMessage}
         )}
 
         <div className="mr-auto text-sm text-muted-foreground">
-          عرض {filteredOrders.length} من {orders.length} طلب
+          عرض {paginatedOrders.length} من {filteredOrders.length} طلب
+          {filteredOrders.length !== orders.length && ` (من إجمالي ${orders.length})`}
         </div>
       </div>
 
@@ -741,6 +760,7 @@ ${statusMessage}
           {orders.length === 0 ? 'لا توجد طلبات بعد' : 'لا توجد طلبات تطابق الفلاتر المحددة'}
         </div>
       ) : (
+        <>
         <div className="rounded-xl border border-border overflow-hidden">
           <Table>
             <TableHeader>
@@ -757,7 +777,7 @@ ${statusMessage}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => (
+              {paginatedOrders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-mono font-medium">
                     {order.order_number}
@@ -1046,6 +1066,54 @@ ${statusMessage}
             </TableBody>
           </Table>
         </div>
+        
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              السابق
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className="w-9 h-9"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              التالي
+            </Button>
+          </div>
+        )}
+      </>
       )}
     </div>
   );

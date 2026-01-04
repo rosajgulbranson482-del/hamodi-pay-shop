@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,14 +7,33 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Zap, LogOut, Package, ShoppingBag, Bell, Loader2, Ticket, Star, BarChart3, MapPin, BellRing } from 'lucide-react';
-import AdminOrders from '@/components/admin/AdminOrders';
-import AdminProducts from '@/components/admin/AdminProducts';
-import AdminCoupons from '@/components/admin/AdminCoupons';
-import AdminReviews from '@/components/admin/AdminReviews';
-import AdminStats from '@/components/admin/AdminStats';
-import AdminCenters from '@/components/admin/AdminCenters';
-import AdminStockNotifications from '@/components/admin/AdminStockNotifications';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy load admin components for better performance
+const AdminOrders = lazy(() => import('@/components/admin/AdminOrders'));
+const AdminProducts = lazy(() => import('@/components/admin/AdminProducts'));
+const AdminCoupons = lazy(() => import('@/components/admin/AdminCoupons'));
+const AdminReviews = lazy(() => import('@/components/admin/AdminReviews'));
+const AdminStats = lazy(() => import('@/components/admin/AdminStats'));
+const AdminCenters = lazy(() => import('@/components/admin/AdminCenters'));
+const AdminStockNotifications = lazy(() => import('@/components/admin/AdminStockNotifications'));
+
+// Loading fallback component
+const TabLoadingFallback = () => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Skeleton className="h-8 w-40" />
+      <Skeleton className="h-10 w-32" />
+    </div>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {[1, 2, 3, 4].map(i => (
+        <Skeleton key={i} className="h-24" />
+      ))}
+    </div>
+    <Skeleton className="h-64" />
+  </div>
+);
 
 const Admin: React.FC = () => {
   const navigate = useNavigate();
@@ -23,6 +42,7 @@ const Admin: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
+  const [activeTab, setActiveTab] = useState('stats');
 
   useEffect(() => {
     const checkAdminRole = async (userId: string) => {
@@ -161,6 +181,13 @@ const Admin: React.FC = () => {
     navigate('/');
   };
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === 'orders') {
+      setNewOrdersCount(0);
+    }
+  };
+
   if (loading || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -213,7 +240,7 @@ const Admin: React.FC = () => {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="stats" className="space-y-4 md:space-y-6" onValueChange={() => setNewOrdersCount(0)}>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 md:space-y-6">
           <TabsList className="grid w-full max-w-5xl grid-cols-7 h-auto p-1">
             <TabsTrigger value="stats" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
               <BarChart3 className="w-4 h-4" />
@@ -250,33 +277,35 @@ const Admin: React.FC = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="stats">
-            <AdminStats />
-          </TabsContent>
+          <Suspense fallback={<TabLoadingFallback />}>
+            <TabsContent value="stats">
+              {activeTab === 'stats' && <AdminStats />}
+            </TabsContent>
 
-          <TabsContent value="orders">
-            <AdminOrders />
-          </TabsContent>
+            <TabsContent value="orders">
+              {activeTab === 'orders' && <AdminOrders />}
+            </TabsContent>
 
-          <TabsContent value="products">
-            <AdminProducts />
-          </TabsContent>
+            <TabsContent value="products">
+              {activeTab === 'products' && <AdminProducts />}
+            </TabsContent>
 
-          <TabsContent value="coupons">
-            <AdminCoupons />
-          </TabsContent>
+            <TabsContent value="coupons">
+              {activeTab === 'coupons' && <AdminCoupons />}
+            </TabsContent>
 
-          <TabsContent value="centers">
-            <AdminCenters />
-          </TabsContent>
+            <TabsContent value="centers">
+              {activeTab === 'centers' && <AdminCenters />}
+            </TabsContent>
 
-          <TabsContent value="notifications">
-            <AdminStockNotifications />
-          </TabsContent>
+            <TabsContent value="notifications">
+              {activeTab === 'notifications' && <AdminStockNotifications />}
+            </TabsContent>
 
-          <TabsContent value="reviews">
-            <AdminReviews />
-          </TabsContent>
+            <TabsContent value="reviews">
+              {activeTab === 'reviews' && <AdminReviews />}
+            </TabsContent>
+          </Suspense>
         </Tabs>
       </main>
     </div>
