@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface CartItem {
   id: string;
@@ -16,39 +18,210 @@ interface CartContextType {
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
+  loading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
   const [items, setItems] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('cart');
     return saved ? JSON.parse(saved) : [];
   });
+  const [loading, setLoading] = useState(false);
+  const [hasSyncedFromDb, setHasSyncedFromDb] = useState(false);
 
+  // Save to localStorage
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
 
-  const addToCart = (product: { id: string; name: string; price: number; image: string }) => {
+  // Load cart from database when user logs in
+  useEffect(() => {
+    if (isAuthenticated && user && !hasSyncedFromDb) {
+      loadCartFromDatabase();
+    }
+  }, [isAuthenticated, user, hasSyncedFromDb]);
+
+  // Reset sync flag when user logs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setHasSyncedFromDb(false);
+    }
+  }, [isAuthenticated]);
+
+  const loadCartFromDatabase = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      // Get cart items from database with product details
+      const { data: cartItems, error } = await supabase
+        .from('cart_items')
+        .select(`
+          product_id,
+          quantity,
+          products (
+            id,
+            name,
+            price,
+            image
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      if (cartItems && cartItems.length > 0) {
+        // Merge database cart with local cart
+        const dbItems: CartItem[] = cartItems
+          .filter(item => item.products)
+          .map(item => ({
+            id: item.products.id,
+            name: item.products.name,
+            price: item.products.price,
+            image: item.products.image || '',
+            quantity: item.quantity,
+          }));
+
+        // Get current local items
+        const localItems = items;
+        
+        // Merge: prioritize local items (newer), add db items if not in local
+        const mergedItems = [...localItems];
+        
+        for (const dbItem of dbItems) {
+          const existsInLocal = localItems.find(l => l.id === dbItem.id);
+          if (!existsInLocal) {
+            mergedItems.push(dbItem);
+          }
+        }
+
+        setItems(mergedItems);
+        
+        // Sync merged cart back to database
+        await syncCartToDatabase(mergedItems);
+      } else if (items.length > 0) {
+        // No items in DB, but has local items - sync local to DB
+        await syncCartToDatabase(items);
+      }
+      
+      setHasSyncedFromDb(true);
+    } catch (error) {
+      console.error('Error loading cart from database:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const syncCartToDatabase = async (cartItems: CartItem[]) => {
+    if (!user) return;
+
+    try {
+      // Clear existing cart items for user
+      await supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', user.id);
+
+      // Insert new cart items
+      if (cartItems.length > 0) {
+        const itemsToInsert = cartItems.map(item => ({
+          user_id: user.id,
+          product_id: item.id,
+          quantity: item.quantity,
+        }));
+
+        await supabase
+          .from('cart_items')
+          .insert(itemsToInsert);
+      }
+    } catch (error) {
+      console.error('Error syncing cart to database:', error);
+    }
+  };
+
+  const saveItemToDatabase = async (productId: string, quantity: number) => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('cart_items')
+        .upsert({
+          user_id: user.id,
+          product_id: productId,
+          quantity: quantity,
+        }, {
+          onConflict: 'user_id,product_id',
+        });
+    } catch (error) {
+      console.error('Error saving cart item:', error);
+    }
+  };
+
+  const removeItemFromDatabase = async (productId: string) => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('product_id', productId);
+    } catch (error) {
+      console.error('Error removing cart item:', error);
+    }
+  };
+
+  const clearCartFromDatabase = async () => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', user.id);
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+    }
+  };
+
+  const addToCart = useCallback((product: { id: string; name: string; price: number; image: string }) => {
     setItems(prev => {
       const existing = prev.find(item => item.id === product.id);
+      let newItems: CartItem[];
+      
       if (existing) {
-        return prev.map(item =>
+        newItems = prev.map(item =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
+        // Save to database
+        if (user) {
+          saveItemToDatabase(product.id, existing.quantity + 1);
+        }
+      } else {
+        newItems = [...prev, { ...product, quantity: 1 }];
+        // Save to database
+        if (user) {
+          saveItemToDatabase(product.id, 1);
+        }
       }
-      return [...prev, { ...product, quantity: 1 }];
+      
+      return newItems;
     });
-  };
+  }, [user]);
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = useCallback((productId: string) => {
     setItems(prev => prev.filter(item => item.id !== productId));
-  };
+    if (user) {
+      removeItemFromDatabase(productId);
+    }
+  }, [user]);
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity < 1) {
       removeFromCart(productId);
       return;
@@ -58,11 +231,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         item.id === productId ? { ...item, quantity } : item
       )
     );
-  };
+    if (user) {
+      saveItemToDatabase(productId, quantity);
+    }
+  }, [user, removeFromCart]);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setItems([]);
-  };
+    if (user) {
+      clearCartFromDatabase();
+    }
+  }, [user]);
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -77,6 +256,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearCart,
         totalItems,
         totalPrice,
+        loading,
       }}
     >
       {children}
