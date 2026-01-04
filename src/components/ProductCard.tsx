@@ -39,6 +39,7 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
   const [additionalImages, setAdditionalImages] = useState<ProductImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
   
   const isInCart = items.some(item => item.id === product.id);
   const isFav = isFavorite(product.id);
@@ -47,6 +48,19 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
     : 0;
   // Check stock: out of stock if in_stock is false OR stock_count is 0
   const inStock = product.in_stock !== false && (product.stock_count === null || product.stock_count === undefined || product.stock_count > 0);
+  
+  // Check if description needs "read more"
+  const descriptionLimit = 60;
+  const hasLongDescription = product.description && product.description.length > descriptionLimit;
+  const truncatedDescription = hasLongDescription 
+    ? product.description?.slice(0, descriptionLimit) + '...' 
+    : product.description;
+
+  const handleToggleDescription = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowFullDescription(prev => !prev);
+  }, []);
 
   // Build all images array: main image + additional images
   const allImages = [
@@ -241,6 +255,22 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
           {product.name}
         </h3>
         
+        {/* Description with Read More */}
+        {product.description && (
+          <div className="hidden md:block mb-2">
+            <p className="text-xs md:text-sm text-muted-foreground">
+              {showFullDescription ? product.description : truncatedDescription}
+            </p>
+            {hasLongDescription && (
+              <button
+                onClick={handleToggleDescription}
+                className="text-xs text-primary hover:underline mt-1 font-medium"
+              >
+                {showFullDescription ? 'عرض أقل' : 'اقرأ المزيد'}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Price */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-2 md:mt-3 gap-1">
