@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
+import { X, Plus, Minus, Trash2, ShoppingBag, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { cn } from '@/lib/utils';
@@ -13,7 +13,7 @@ interface CartDrawerProps {
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) => {
   const navigate = useNavigate();
-  const { items, removeFromCart, updateQuantity, totalPrice, totalItems } = useCart();
+  const { items, removeFromCart, updateQuantity, totalPrice, totalItems, loading } = useCart();
 
   const handleCheckout = () => {
     if (onCheckout) {
@@ -60,7 +60,12 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
 
         {/* Items */}
         <div className="flex-1 overflow-y-auto p-4">
-          {items.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+              <p className="text-muted-foreground">جاري تحميل السلة...</p>
+            </div>
+          ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <ShoppingBag className="w-16 h-16 text-muted-foreground/50 mb-4" />
               <p className="text-lg font-medium text-muted-foreground">سلة التسوق فارغة</p>
