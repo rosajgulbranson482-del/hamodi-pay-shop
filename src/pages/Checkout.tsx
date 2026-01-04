@@ -30,6 +30,29 @@ interface AppliedCoupon {
 
 const PAYMENT_NUMBER = "01025529130";
 const WHATSAPP_NUMBER = "201025529130";
+const FIXED_DELIVERY_FEE = 50;
+
+// مراكز محافظة الشرقية
+const SHARQIA_CENTERS = [
+  'الزقازيق',
+  'بلبيس',
+  'منيا القمح',
+  'أبو حماد',
+  'أبو كبير',
+  'فاقوس',
+  'الحسينية',
+  'ههيا',
+  'كفر صقر',
+  'أولاد صقر',
+  'الإبراهيمية',
+  'ديرب نجم',
+  'القرين',
+  'مشتول السوق',
+  'القنايات',
+  'أبو حماد',
+  'العاشر من رمضان',
+  'صان الحجر',
+];
 
 type PaymentMethod = 'cash_on_delivery' | 'vodafone_cash' | '';
 
@@ -64,7 +87,8 @@ const CheckoutContent: React.FC = () => {
     name: '',
     phone: '',
     email: '',
-    governorate: '',
+    governorate: 'الشرقية',
+    center: '',
     address: '',
     notes: '',
     verificationCode: '',
@@ -126,8 +150,7 @@ const CheckoutContent: React.FC = () => {
     }
   }, [isAuthenticated, profile, governorates]);
 
-  const selectedGovernorate = governorates.find(g => g.id === formData.governorate);
-  const deliveryFee = selectedGovernorate?.delivery_fee || 0;
+  const deliveryFee = FIXED_DELIVERY_FEE;
   const discountAmount = appliedCoupon?.discount_amount || 0;
   const finalTotal = Math.max(0, totalPrice + deliveryFee - discountAmount);
 
@@ -260,7 +283,7 @@ const CheckoutContent: React.FC = () => {
   };
 
   const handleSubmitOrder = () => {
-    if (!formData.name || !formData.phone || !formData.governorate || !formData.address) {
+    if (!formData.name || !formData.phone || !formData.center || !formData.address) {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع البيانات المطلوبة",
@@ -309,8 +332,8 @@ const CheckoutContent: React.FC = () => {
           customer_name: formData.name,
           customer_phone: formData.phone,
           customer_email: formData.email || null,
-          customer_address: formData.address,
-          governorate: selectedGovernorate?.name || '',
+          customer_address: `${formData.center} - ${formData.address}`,
+          governorate: formData.governorate,
           payment_method: formData.paymentMethod,
           notes: formData.notes || null,
           coupon_code: appliedCoupon?.code || null,
@@ -351,7 +374,8 @@ const CheckoutContent: React.FC = () => {
 
 👤 *العميل:* ${formData.name}
 📱 *الهاتف:* ${formData.phone}
-📍 *المحافظة:* ${selectedGovernorate?.name}
+📍 *المحافظة:* ${formData.governorate}
+🏘️ *المركز:* ${formData.center}
 🏠 *العنوان:* ${formData.address}
 ${formData.notes ? `📝 *ملاحظات:* ${formData.notes}` : ''}
 
@@ -486,28 +510,42 @@ ${orderItemsText}
                     />
                   </div>
 
-                  {/* Governorate */}
+                  {/* Governorate - Fixed to Sharqia */}
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-primary" />
                       المحافظة
                     </Label>
+                    <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">محافظة الشرقية</span>
+                        <span className="text-sm text-muted-foreground">
+                          توصيل: {FIXED_DELIVERY_FEE} ج.م
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        نوصل لجميع مراكز محافظة الشرقية فقط
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Center Selection */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      المركز / المدينة
+                    </Label>
                     <Select
-                      value={formData.governorate}
-                      onValueChange={(value) => handleInputChange('governorate', value)}
+                      value={formData.center}
+                      onValueChange={(value) => handleInputChange('center', value)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="اختر المحافظة" />
+                        <SelectValue placeholder="اختر المركز" />
                       </SelectTrigger>
                       <SelectContent>
-                        {governorates.map((gov) => (
-                          <SelectItem key={gov.id} value={gov.id}>
-                            <div className="flex items-center justify-between w-full gap-4">
-                              <span>{gov.name}</span>
-                              <span className="text-muted-foreground text-sm">
-                                توصيل: {gov.delivery_fee} ج.م ({gov.delivery_days})
-                              </span>
-                            </div>
+                        {SHARQIA_CENTERS.map((center) => (
+                          <SelectItem key={center} value={center}>
+                            {center}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -592,6 +630,40 @@ ${orderItemsText}
                         </button>
                       ))}
                     </div>
+
+                    {/* Cash on Delivery Warning */}
+                    {formData.paymentMethod === 'cash_on_delivery' && (
+                      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">⚠️</span>
+                          <div className="space-y-2">
+                            <p className="font-bold text-amber-800 dark:text-amber-200">
+                              تنبيه هام - مصاريف الشحن مقدماً
+                            </p>
+                            <p className="text-sm text-amber-700 dark:text-amber-300">
+                              في حالة اختيار <strong>الدفع كاش عند الاستلام</strong>، يجب تحويل مصاريف الشحن مقدماً 
+                              <strong className="text-primary mx-1">({FIXED_DELIVERY_FEE} ج.م)</strong>
+                              عبر فودافون كاش أو انستا باي على الرقم:
+                            </p>
+                            <div className="flex items-center gap-2 bg-white dark:bg-background/50 p-2 rounded-lg">
+                              <span className="font-bold text-lg tracking-wider" dir="ltr">{PAYMENT_NUMBER}</span>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={copyPaymentNumber}
+                                className="mr-auto"
+                              >
+                                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                                {copied ? 'تم' : 'نسخ'}
+                              </Button>
+                            </div>
+                            <p className="text-xs text-amber-600 dark:text-amber-400">
+                              📌 سيتم التواصل معك لتأكيد استلام مصاريف الشحن قبل إرسال الطلب
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Coupon */}
