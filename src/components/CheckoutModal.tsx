@@ -223,6 +223,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleSubmitOrder = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "يرجى تسجيل الدخول",
+        description: "يجب تسجيل الدخول أولاً لإتمام الطلب",
+        variant: "destructive",
+      });
+      onClose();
+      window.location.href = '/customer-auth';
+      return;
+    }
+
     if (!formData.name || !formData.phone || !formData.governorate || !formData.address) {
       toast({
         title: "خطأ",
