@@ -241,11 +241,6 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
           {product.name}
         </h3>
         
-        {product.description && (
-          <p className="text-xs md:text-sm text-muted-foreground mb-2 md:mb-3 line-clamp-2 hidden md:block">
-            {product.description}
-          </p>
-        )}
 
         {/* Price */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-2 md:mt-3 gap-1">
