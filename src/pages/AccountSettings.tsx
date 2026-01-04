@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { governorates } from '@/data/governorates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +10,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { ArrowRight, Loader2, User, MapPin, Phone, Save } from 'lucide-react';
 
+// مراكز محافظة الشرقية
+const SHARQIA_CENTERS = [
+  'الزقازيق',
+  'بلبيس',
+  'منيا القمح',
+  'أبو حماد',
+  'أبو كبير',
+  'فاقوس',
+  'الحسينية',
+  'ههيا',
+  'كفر صقر',
+  'أولاد صقر',
+  'الإبراهيمية',
+  'ديرب نجم',
+  'القرين',
+  'مشتول السوق',
+  'القنايات',
+  'العاشر من رمضان',
+  'صان الحجر',
+];
 const AccountSettings = () => {
   const navigate = useNavigate();
   const { user, profile, loading, isAuthenticated, updateProfile } = useAuth();
@@ -143,20 +162,20 @@ const AccountSettings = () => {
                   />
                 </div>
 
-                {/* Default Governorate */}
+                {/* Default Center */}
                 <div className="space-y-2">
                   <Label htmlFor="governorate" className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
-                    المحافظة الافتراضية
+                    المركز الافتراضي (محافظة الشرقية)
                   </Label>
                   <Select value={defaultGovernorate} onValueChange={setDefaultGovernorate}>
                     <SelectTrigger>
-                      <SelectValue placeholder="اختر المحافظة" />
+                      <SelectValue placeholder="اختر المركز" />
                     </SelectTrigger>
                     <SelectContent>
-                      {governorates.map((gov) => (
-                        <SelectItem key={gov.id} value={gov.name}>
-                          {gov.name}
+                      {SHARQIA_CENTERS.map((center) => (
+                        <SelectItem key={center} value={center}>
+                          {center}
                         </SelectItem>
                       ))}
                     </SelectContent>

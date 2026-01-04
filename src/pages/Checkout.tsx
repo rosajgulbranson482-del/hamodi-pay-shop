@@ -14,12 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CartProvider } from '@/context/CartContext';
 
-interface Governorate {
-  id: string;
-  name: string;
-  delivery_fee: number;
-  delivery_days: string;
-}
 
 interface AppliedCoupon {
   code: string;
@@ -82,7 +76,7 @@ const CheckoutContent: React.FC = () => {
   const [step, setStep] = useState(1);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [governorates, setGovernorates] = useState<Governorate[]>([]);
+  
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -111,44 +105,22 @@ const CheckoutContent: React.FC = () => {
     }
   }, [items.length, navigate]);
 
-  // Fetch governorates from database
-  useEffect(() => {
-    const fetchGovernorates = async () => {
-      const { data } = await supabase
-        .from('governorates')
-        .select('id, name, delivery_fee, delivery_days')
-        .eq('is_active', true)
-        .order('name');
-      
-      if (data) {
-        setGovernorates(data);
-      }
-    };
-    
-    fetchGovernorates();
-  }, []);
 
-  // Pre-fill form with profile data when authenticated and governorates are loaded
+  // Pre-fill form with profile data when authenticated
   useEffect(() => {
-    if (isAuthenticated && profile && governorates.length > 0) {
-      // Find governorate ID by name
-      const matchedGovernorate = governorates.find(
-        g => g.name === profile.default_governorate
-      );
-      
+    if (isAuthenticated && profile) {
       setFormData(prev => ({
         ...prev,
         name: profile.full_name || prev.name,
         phone: profile.phone || prev.phone,
         address: profile.default_address || prev.address,
-        governorate: matchedGovernorate?.id || prev.governorate,
       }));
       // Auto-verify phone for authenticated users
       if (profile.phone) {
         setIsVerified(true);
       }
     }
-  }, [isAuthenticated, profile, governorates]);
+  }, [isAuthenticated, profile]);
 
   const deliveryFee = FIXED_DELIVERY_FEE;
   const discountAmount = appliedCoupon?.discount_amount || 0;
@@ -211,14 +183,13 @@ const CheckoutContent: React.FC = () => {
   };
 
   const handleSaveAsDefault = async () => {
-    if (!isAuthenticated || !formData.address || !formData.governorate) return;
+    if (!isAuthenticated || !formData.address) return;
     
     setSavingAddress(true);
-    const selectedGov = governorates.find(g => g.id === formData.governorate);
     
     const { error } = await updateProfile({
-      default_address: formData.address,
-      default_governorate: selectedGov?.name || null,
+      default_address: `${formData.center} - ${formData.address}`,
+      default_governorate: 'الشرقية',
     });
     
     setSavingAddress(false);
