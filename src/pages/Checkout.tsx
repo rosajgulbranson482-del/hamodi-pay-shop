@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Phone, MapPin, User, MessageSquare, Copy, Check, Wallet, Banknote, Ticket, Loader2, Mail, ArrowRight, ShoppingBag, Trash2, Plus, Minus, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,6 +68,7 @@ const paymentMethods = [
 
 const CheckoutContent: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { items, totalPrice, clearCart, removeFromCart, updateQuantity } = useCart();
   const { user, profile, isAuthenticated, updateProfile } = useAuth();
   const { toast } = useToast();
@@ -132,6 +133,19 @@ const CheckoutContent: React.FC = () => {
     fetchDeliverySettings();
   }, []);
 
+
+  // Show welcome message when returning after login
+  useEffect(() => {
+    const fromAuth = searchParams.get('from');
+    if (fromAuth === 'auth' && isAuthenticated) {
+      toast({
+        title: "مرحباً بعودتك! 👋",
+        description: "يمكنك الآن إكمال طلبك",
+      });
+      // Remove the query param after showing the message
+      setSearchParams({});
+    }
+  }, [isAuthenticated, searchParams, setSearchParams, toast]);
 
   // Pre-fill form with profile data when authenticated
   useEffect(() => {

@@ -46,7 +46,7 @@ const CustomerAuth: React.FC = () => {
           if (isAdmin) {
             navigate('/admin');
           } else if (redirectTo === 'checkout') {
-            navigate('/checkout');
+            navigate('/checkout?from=auth');
           } else {
             navigate('/');
           }
@@ -55,7 +55,7 @@ const CustomerAuth: React.FC = () => {
         console.error('Error checking role:', error);
         if (isMounted) {
           if (redirectTo === 'checkout') {
-            navigate('/checkout');
+            navigate('/checkout?from=auth');
           } else {
             navigate('/');
           }
