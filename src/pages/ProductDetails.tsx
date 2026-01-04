@@ -25,6 +25,7 @@ import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
 import CartDrawer from '@/components/CartDrawer';
+import NotifyWhenAvailable from '@/components/NotifyWhenAvailable';
 
 interface ProductImage {
   id: string;
@@ -401,25 +402,32 @@ const ProductDetailsContent = () => {
               
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  size="lg"
-                  variant={isInCart ? "success" : "default"}
-                  className="flex-1 text-lg py-6"
-                  onClick={handleAddToCart}
-                  disabled={!inStock}
-                >
-                  {isInCart ? (
-                    <>
-                      <Check className="w-5 h-5" />
-                      في السلة
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingCart className="w-5 h-5" />
-                      أضف للسلة
-                    </>
-                  )}
-                </Button>
+                {inStock ? (
+                  <Button
+                    size="lg"
+                    variant={isInCart ? "success" : "default"}
+                    className="flex-1 text-lg py-6"
+                    onClick={handleAddToCart}
+                  >
+                    {isInCart ? (
+                      <>
+                        <Check className="w-5 h-5" />
+                        في السلة
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-5 h-5" />
+                        أضف للسلة
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <NotifyWhenAvailable 
+                    productId={product.id} 
+                    productName={product.name}
+                    className="flex-1 text-lg py-6"
+                  />
+                )}
                 
                 <Button
                   size="lg"

@@ -7,6 +7,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import NotifyWhenAvailable from '@/components/NotifyWhenAvailable';
 
 interface ProductImage {
   id: string;
@@ -200,25 +201,33 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
 
         {/* Quick Add Button - Always visible on mobile, hover on desktop */}
         <div className="absolute inset-x-3 bottom-3 opacity-100 md:opacity-0 translate-y-0 md:translate-y-4 md:group-hover:opacity-100 md:group-hover:translate-y-0 transition-all duration-300">
-          <Button
-            variant={isInCart ? "success" : "default"}
-            className="w-full text-sm md:text-base"
-            size="sm"
-            onClick={handleAddToCart}
-            disabled={!inStock}
-          >
-            {isInCart ? (
-              <>
-                <Check className="w-4 h-4" />
-                في السلة
-              </>
-            ) : (
-              <>
-                <ShoppingCart className="w-4 h-4" />
-                أضف للسلة
-              </>
-            )}
-          </Button>
+          {inStock ? (
+            <Button
+              variant={isInCart ? "success" : "default"}
+              className="w-full text-sm md:text-base"
+              size="sm"
+              onClick={handleAddToCart}
+            >
+              {isInCart ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  في السلة
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="w-4 h-4" />
+                  أضف للسلة
+                </>
+              )}
+            </Button>
+          ) : (
+            <NotifyWhenAvailable 
+              productId={product.id} 
+              productName={product.name}
+              variant="compact"
+              className="w-full text-sm md:text-base"
+            />
+          )}
         </div>
       </Link>
 

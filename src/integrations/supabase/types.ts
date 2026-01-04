@@ -374,6 +374,47 @@ export type Database = {
           },
         ]
       }
+      stock_notifications: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          notified: boolean | null
+          notified_at: string | null
+          phone: string | null
+          product_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          notified?: boolean | null
+          notified_at?: string | null
+          phone?: string | null
+          product_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          notified?: boolean | null
+          notified_at?: string | null
+          phone?: string | null
+          product_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_notifications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
