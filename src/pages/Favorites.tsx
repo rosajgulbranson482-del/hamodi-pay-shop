@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link } from 'react-router-dom';
-import { Heart, Loader2, ShoppingBag } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Heart, Loader2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,6 +23,7 @@ interface Product {
 }
 
 const Favorites: React.FC = () => {
+  const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { favorites, loading: favLoading } = useFavorites();
   const [products, setProducts] = useState<Product[]>([]);
@@ -53,12 +54,23 @@ const Favorites: React.FC = () => {
     }
   }, [favorites, favLoading]);
 
+  // Show loading state with back button
   if (authLoading || favLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-4 py-16 flex justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="container mx-auto px-4 py-8">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)} 
+            className="mb-4 gap-2"
+          >
+            <ArrowRight className="w-4 h-4" />
+            رجوع
+          </Button>
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
         </div>
         <Footer />
       </div>
@@ -69,13 +81,23 @@ const Favorites: React.FC = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-4 py-16 text-center">
-          <Heart className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-          <h1 className="text-2xl font-bold mb-2">المفضلة</h1>
-          <p className="text-muted-foreground mb-6">سجل دخولك لعرض منتجاتك المفضلة</p>
-          <Link to="/login">
-            <Button>تسجيل الدخول</Button>
-          </Link>
+        <div className="container mx-auto px-4 py-8">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)} 
+            className="mb-4 gap-2"
+          >
+            <ArrowRight className="w-4 h-4" />
+            رجوع
+          </Button>
+          <div className="text-center py-12">
+            <Heart className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+            <h1 className="text-2xl font-bold mb-2">المفضلة</h1>
+            <p className="text-muted-foreground mb-6">سجل دخولك لعرض منتجاتك المفضلة</p>
+            <Link to="/login">
+              <Button>تسجيل الدخول</Button>
+            </Link>
+          </div>
         </div>
         <Footer />
       </div>
@@ -92,6 +114,15 @@ const Favorites: React.FC = () => {
       <Header />
 
       <main className="container mx-auto px-4 py-8">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate(-1)} 
+          className="mb-4 gap-2"
+        >
+          <ArrowRight className="w-4 h-4" />
+          رجوع
+        </Button>
+        
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
             <Heart className="w-6 h-6 text-red-500" />
