@@ -12,7 +12,7 @@ import AdminProducts from '@/components/admin/AdminProducts';
 import AdminCoupons from '@/components/admin/AdminCoupons';
 import AdminReviews from '@/components/admin/AdminReviews';
 import AdminStats from '@/components/admin/AdminStats';
-import AdminGovernorates from '@/components/admin/AdminGovernorates';
+import AdminCenters from '@/components/admin/AdminCenters';
 import AdminStockNotifications from '@/components/admin/AdminStockNotifications';
 import { Badge } from '@/components/ui/badge';
 
@@ -236,9 +236,9 @@ const Admin: React.FC = () => {
               <Ticket className="w-4 h-4" />
               <span className="hidden sm:inline">الكوبونات</span>
             </TabsTrigger>
-            <TabsTrigger value="governorates" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
+            <TabsTrigger value="centers" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
               <MapPin className="w-4 h-4" />
-              <span className="hidden sm:inline">المحافظات</span>
+              <span className="hidden sm:inline">المراكز</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
               <BellRing className="w-4 h-4" />
@@ -266,8 +266,8 @@ const Admin: React.FC = () => {
             <AdminCoupons />
           </TabsContent>
 
-          <TabsContent value="governorates">
-            <AdminGovernorates />
+          <TabsContent value="centers">
+            <AdminCenters />
           </TabsContent>
 
           <TabsContent value="notifications">
