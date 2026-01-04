@@ -30,6 +30,34 @@ interface CreateOrderRequest {
   user_id?: string;
 }
 
+// Helper function to log to backend_logs table
+async function logToBackend(
+  supabase: any, 
+  functionName: string, 
+  logType: 'info' | 'error' | 'warning' | 'debug',
+  message: string,
+  details?: any,
+  executionTimeMs?: number,
+  statusCode?: number,
+  ipAddress?: string,
+  userAgent?: string
+) {
+  try {
+    await supabase.from('backend_logs').insert({
+      function_name: functionName,
+      log_type: logType,
+      message,
+      details: details ? JSON.stringify(details) : null,
+      execution_time_ms: executionTimeMs || null,
+      status_code: statusCode || null,
+      ip_address: ipAddress || null,
+      user_agent: userAgent || null,
+    });
+  } catch (e) {
+    console.error('Failed to log to backend_logs:', e);
+  }
+}
+
 serve(async (req) => {
   const startTime = Date.now();
   
@@ -38,13 +66,27 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Get client info for logging
+  const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                   req.headers.get('x-real-ip') || 
+                   'unknown';
+  const userAgent = req.headers.get('user-agent') || 'unknown';
+
+  // Create Supabase client with service role to bypass RLS
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   try {
     const body: CreateOrderRequest = await req.json();
     
     // === VALIDATION PHASE ===
     const validationError = validateOrderRequest(body);
     if (validationError) {
+      const duration = Date.now() - startTime;
       console.log(`Validation failed: ${validationError}`);
+      await logToBackend(supabase, 'create-order', 'warning', `Validation failed: ${validationError}`, 
+        { customer_phone: body.customer_phone?.slice(-4) }, duration, 400, clientIP, userAgent);
       return new Response(
         JSON.stringify({ error: validationError }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,11 +94,6 @@ serve(async (req) => {
     }
 
     console.log(`Creating order for: ${body.customer_name}, Items: ${body.items.length}`);
-
-    // Create Supabase client with service role to bypass RLS
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // === STOCK CHECK PHASE (Single Query) ===
     const productIds = body.items.filter(item => item.product_id).map(item => item.product_id);
@@ -68,7 +105,10 @@ serve(async (req) => {
         .in('id', productIds);
 
       if (productsError) {
+        const duration = Date.now() - startTime;
         console.error('Error fetching products:', productsError);
+        await logToBackend(supabase, 'create-order', 'error', 'Error fetching products', 
+          { error: productsError.message }, duration, 500, clientIP, userAgent);
         return new Response(
           JSON.stringify({ error: 'حدث خطأ أثناء التحقق من المخزون' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -78,7 +118,10 @@ serve(async (req) => {
       // Validate stock for all items at once
       const stockError = validateStock(body.items, products || []);
       if (stockError) {
+        const duration = Date.now() - startTime;
         console.log(`Stock validation failed: ${stockError}`);
+        await logToBackend(supabase, 'create-order', 'warning', `Stock validation failed: ${stockError}`, 
+          { items: body.items.length }, duration, 400, clientIP, userAgent);
         return new Response(
           JSON.stringify({ error: stockError }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -113,7 +156,10 @@ serve(async (req) => {
       .single();
 
     if (orderError) {
+      const duration = Date.now() - startTime;
       console.error('Error creating order:', orderError);
+      await logToBackend(supabase, 'create-order', 'error', 'Error creating order', 
+        { error: orderError.message }, duration, 500, clientIP, userAgent);
       return new Response(
         JSON.stringify({ error: 'حدث خطأ أثناء إنشاء الطلب' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -134,7 +180,10 @@ serve(async (req) => {
       .insert(orderItems);
 
     if (itemsError) {
+      const duration = Date.now() - startTime;
       console.error('Error creating order items:', itemsError);
+      await logToBackend(supabase, 'create-order', 'error', 'Error creating order items - rollback', 
+        { error: itemsError.message, order_id: order.id }, duration, 500, clientIP, userAgent);
       // Rollback order
       await supabase.from('orders').delete().eq('id', order.id);
       return new Response(
@@ -158,7 +207,8 @@ serve(async (req) => {
 
       if (stockError) {
         console.error('Error updating stock (non-critical):', stockError);
-        // Don't fail the order, just log the error
+        await logToBackend(supabase, 'create-order', 'warning', 'Error updating stock (non-critical)', 
+          { error: stockError.message, order_number: orderNumber }, undefined, undefined, clientIP, userAgent);
       } else {
         console.log(`Stock updated for ${productUpdates.length} products`);
       }
@@ -171,6 +221,11 @@ serve(async (req) => {
 
     const duration = Date.now() - startTime;
     console.log(`Order ${orderNumber} created successfully in ${duration}ms`);
+    
+    // Log successful order creation
+    await logToBackend(supabase, 'create-order', 'info', `Order created successfully: ${orderNumber}`, 
+      { order_number: orderNumber, total: body.total, items_count: body.items.length, governorate: body.governorate },
+      duration, 200, clientIP, userAgent);
 
     return new Response(
       JSON.stringify({ 
@@ -183,8 +238,12 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
     console.error('Error in create-order function:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    await logToBackend(supabase, 'create-order', 'error', 'Unhandled error in create-order', 
+      { error: errorMessage }, duration, 500, clientIP, userAgent);
     return new Response(
       JSON.stringify({ error: 'حدث خطأ في معالجة الطلب' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
