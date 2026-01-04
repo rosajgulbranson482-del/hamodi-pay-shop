@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { ShoppingCart, Check, ChevronRight, ChevronLeft, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
@@ -30,12 +30,13 @@ interface ProductCardProps {
   product: Product;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
   const { addToCart, items } = useCart();
   const { toast } = useToast();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [additionalImages, setAdditionalImages] = useState<ProductImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   const isInCart = items.some(item => item.id === product.id);
   const isFav = isFavorite(product.id);
@@ -66,7 +67,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     fetchAdditionalImages();
   }, [product.id]);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!inStock) return;
@@ -80,34 +81,42 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       title: "تمت الإضافة للسلة",
       description: `تم إضافة ${product.name} إلى سلة التسوق`,
     });
-  };
+  }, [inStock, addToCart, product.id, product.name, product.price, product.image, toast]);
 
-  const handleToggleFavorite = (e: React.MouseEvent) => {
+  const handleToggleFavorite = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     toggleFavorite(product.id);
-  };
+  }, [toggleFavorite, product.id]);
 
-  const nextImage = (e: React.MouseEvent) => {
+  const nextImage = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
-  };
+  }, [allImages.length]);
 
-  const prevImage = (e: React.MouseEvent) => {
+  const prevImage = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
-  };
+  }, [allImages.length]);
 
   return (
     <div className="group bg-card rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-border/50 hover:border-primary/30 animate-fade-in">
       {/* Image */}
       <Link to={`/product/${product.id}`} className="block relative aspect-square overflow-hidden bg-muted">
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-muted animate-pulse" />
+        )}
         <img
           src={allImages[currentImageIndex] || '/placeholder.svg'}
           alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          loading="lazy"
+          onLoad={() => setImageLoaded(true)}
+          className={cn(
+            "w-full h-full object-cover transition-all duration-500 group-hover:scale-110",
+            imageLoaded ? "opacity-100" : "opacity-0"
+          )}
         />
         
         {/* Favorite Button */}
@@ -243,6 +252,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       </div>
     </div>
   );
-};
+});
+
+ProductCard.displayName = 'ProductCard';
 
 export default ProductCard;
