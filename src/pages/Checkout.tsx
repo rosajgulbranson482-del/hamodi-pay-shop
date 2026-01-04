@@ -24,7 +24,6 @@ interface AppliedCoupon {
 
 const PAYMENT_NUMBER = "01025529130";
 const WHATSAPP_NUMBER = "201025529130";
-const FIXED_DELIVERY_FEE = 50;
 
 // مراكز محافظة الشرقية
 const SHARQIA_CENTERS = [
@@ -97,6 +96,10 @@ const CheckoutContent: React.FC = () => {
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
+  
+  // Delivery settings state
+  const [deliveryFee, setDeliveryFee] = useState(50);
+  const [deliveryDays, setDeliveryDays] = useState('1-3 أيام');
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -104,6 +107,30 @@ const CheckoutContent: React.FC = () => {
       navigate('/');
     }
   }, [items.length, navigate]);
+
+  // Fetch delivery settings
+  useEffect(() => {
+    const fetchDeliverySettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('delivery_settings')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          setDeliveryFee(Number(data.delivery_fee));
+          setDeliveryDays(data.delivery_days);
+        }
+      } catch (err) {
+        console.error('Error fetching delivery settings:', err);
+      }
+    };
+
+    fetchDeliverySettings();
+  }, []);
 
 
   // Pre-fill form with profile data when authenticated
@@ -122,7 +149,6 @@ const CheckoutContent: React.FC = () => {
     }
   }, [isAuthenticated, profile]);
 
-  const deliveryFee = FIXED_DELIVERY_FEE;
   const discountAmount = appliedCoupon?.discount_amount || 0;
   const finalTotal = Math.max(0, totalPrice + deliveryFee - discountAmount);
 
@@ -491,7 +517,7 @@ ${orderItemsText}
                       <div className="flex items-center justify-between">
                         <span className="font-medium">محافظة الشرقية</span>
                         <span className="text-sm text-muted-foreground">
-                          توصيل: {FIXED_DELIVERY_FEE} ج.م
+                          توصيل: {deliveryFee} ج.م ({deliveryDays})
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -613,7 +639,7 @@ ${orderItemsText}
                             </p>
                             <p className="text-sm text-amber-700 dark:text-amber-300">
                               في حالة اختيار <strong>الدفع كاش عند الاستلام</strong>، يجب تحويل مصاريف الشحن مقدماً 
-                              <strong className="text-primary mx-1">({FIXED_DELIVERY_FEE} ج.م)</strong>
+                              <strong className="text-primary mx-1">({deliveryFee} ج.م)</strong>
                               عبر فودافون كاش أو انستا باي على الرقم:
                             </p>
                             <div className="flex items-center gap-2 bg-white dark:bg-background/50 p-2 rounded-lg">
