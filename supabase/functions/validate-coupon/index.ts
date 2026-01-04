@@ -6,6 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Rate limiting configuration
+const MAX_ATTEMPTS = 5; // Max attempts per hour
+const BLOCK_DURATION_MINUTES = 60; // Block duration in minutes
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -14,6 +18,13 @@ serve(async (req) => {
 
   try {
     const { code, orderTotal } = await req.json();
+
+    // Get client IP from headers
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+
+    console.log('Coupon validation attempt from IP:', clientIP);
 
     if (!code || typeof code !== 'string') {
       console.error('Invalid coupon code provided');
@@ -24,12 +35,53 @@ serve(async (req) => {
     }
 
     const sanitizedCode = code.trim().toUpperCase();
+    
+    // Validate code format (prevent injection)
+    if (sanitizedCode.length > 50 || !/^[A-Z0-9_-]+$/.test(sanitizedCode)) {
+      console.error('Invalid coupon code format:', sanitizedCode);
+      return new Response(
+        JSON.stringify({ valid: false, error: 'صيغة الكوبون غير صحيحة' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('Validating coupon:', sanitizedCode);
 
     // Create Supabase client with service role to bypass RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check rate limiting - count failed attempts in the last hour
+    const oneHourAgo = new Date(Date.now() - BLOCK_DURATION_MINUTES * 60 * 1000).toISOString();
+    
+    const { count: failedAttempts, error: countError } = await supabase
+      .from('coupon_attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('ip_address', clientIP)
+      .eq('success', false)
+      .gte('created_at', oneHourAgo);
+
+    if (countError) {
+      console.error('Error checking rate limit:', countError);
+    }
+
+    const currentAttempts = failedAttempts || 0;
+    console.log(`IP ${clientIP} has ${currentAttempts} failed attempts in the last hour`);
+
+    // Check if blocked
+    if (currentAttempts >= MAX_ATTEMPTS) {
+      console.log(`IP ${clientIP} is blocked due to too many failed attempts`);
+      return new Response(
+        JSON.stringify({ 
+          valid: false, 
+          error: `تم حظرك مؤقتاً بسبب كثرة المحاولات الفاشلة. حاول مرة أخرى بعد ساعة.`,
+          blocked: true,
+          remainingAttempts: 0
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Fetch coupon with service role
     const { data: coupon, error: couponError } = await supabase
@@ -47,10 +99,29 @@ serve(async (req) => {
       );
     }
 
+    // Log the attempt
+    const isValid = !!coupon;
+    await supabase.from('coupon_attempts').insert({
+      ip_address: clientIP,
+      attempted_code: sanitizedCode,
+      success: isValid,
+    });
+
+    // Cleanup old attempts occasionally (1% chance per request)
+    if (Math.random() < 0.01) {
+      console.log('Running cleanup of old coupon attempts');
+      await supabase.rpc('cleanup_old_coupon_attempts');
+    }
+
     if (!coupon) {
-      console.log('Coupon not found:', sanitizedCode);
+      const remainingAttempts = MAX_ATTEMPTS - currentAttempts - 1;
+      console.log('Coupon not found:', sanitizedCode, `Remaining attempts: ${remainingAttempts}`);
       return new Response(
-        JSON.stringify({ valid: false, error: 'كود الكوبون غير صالح' }),
+        JSON.stringify({ 
+          valid: false, 
+          error: 'كود الكوبون غير صالح',
+          remainingAttempts: Math.max(0, remainingAttempts)
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

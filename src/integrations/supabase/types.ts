@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      coupon_attempts: {
+        Row: {
+          attempted_code: string
+          created_at: string
+          id: string
+          ip_address: string
+          success: boolean
+        }
+        Insert: {
+          attempted_code: string
+          created_at?: string
+          id?: string
+          ip_address: string
+          success?: boolean
+        }
+        Update: {
+          attempted_code?: string
+          created_at?: string
+          id?: string
+          ip_address?: string
+          success?: boolean
+        }
+        Relationships: []
+      }
       coupons: {
         Row: {
           code: string
@@ -465,6 +489,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_coupon_attempts: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
