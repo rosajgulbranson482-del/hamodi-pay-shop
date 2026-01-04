@@ -5,6 +5,7 @@ import { Heart, Loader2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/hooks/useAuth';
+import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
@@ -22,7 +23,7 @@ interface Product {
   badge: string | null;
 }
 
-const Favorites: React.FC = () => {
+const FavoritesContent: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { favorites, loading: favLoading } = useFavorites();
@@ -162,6 +163,14 @@ const Favorites: React.FC = () => {
 
       <Footer />
     </div>
+  );
+};
+
+const Favorites: React.FC = () => {
+  return (
+    <CartProvider>
+      <FavoritesContent />
+    </CartProvider>
   );
 };
 
