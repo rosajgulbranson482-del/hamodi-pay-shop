@@ -250,6 +250,10 @@ const AdminProducts: React.FC = () => {
     e.preventDefault();
     setSaving(true);
 
+    const newStockCount = parseInt(formData.stock_count) || 0;
+    const wasOutOfStock = editingProduct && (!editingProduct.in_stock || editingProduct.stock_count === 0);
+    const isNowInStock = formData.in_stock && newStockCount > 0;
+
     const productData = {
       name: formData.name,
       description: formData.description || null,
@@ -259,7 +263,7 @@ const AdminProducts: React.FC = () => {
       category: formData.category,
       badge: formData.badge || null,
       in_stock: formData.in_stock,
-      stock_count: parseInt(formData.stock_count) || 0,
+      stock_count: newStockCount,
     };
 
     let productId = editingProduct?.id;
@@ -274,6 +278,19 @@ const AdminProducts: React.FC = () => {
         toast({ title: "خطأ", description: error.message, variant: "destructive" });
         setSaving(false);
         return;
+      }
+
+      // Send stock notifications if product was out of stock and now is in stock
+      if (wasOutOfStock && isNowInStock) {
+        try {
+          console.log("Sending stock notifications for product:", editingProduct.id);
+          await supabase.functions.invoke('send-stock-notification', {
+            body: { product_id: editingProduct.id }
+          });
+          toast({ title: "تم إرسال الإشعارات", description: "تم إشعار العملاء المسجلين بتوفر المنتج" });
+        } catch (notifyError) {
+          console.error("Failed to send stock notifications:", notifyError);
+        }
       }
     } else {
       const { data, error } = await supabase

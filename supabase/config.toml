@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-order-notification]
 verify_jwt = false
+
+[functions.send-stock-notification]
+verify_jwt = false
