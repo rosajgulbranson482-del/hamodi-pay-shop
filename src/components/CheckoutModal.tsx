@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Phone, MapPin, User, MessageSquare, CreditCard, Copy, Check, Wallet, Banknote, Ticket, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +54,7 @@ const paymentMethods = [
 ];
 
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const { items, totalPrice, clearCart } = useCart();
   const { user, profile, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -230,7 +232,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         variant: "destructive",
       });
       onClose();
-      window.location.href = '/customer-auth';
+      navigate('/customer-auth');
       return;
     }
 
