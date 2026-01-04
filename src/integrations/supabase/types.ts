@@ -524,6 +524,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_cleanup_old_data: { Args: never; Returns: undefined }
+      batch_update_stock: {
+        Args: { product_updates: Json }
+        Returns: undefined
+      }
       cleanup_old_coupon_attempts: { Args: never; Returns: undefined }
       has_role: {
         Args: {

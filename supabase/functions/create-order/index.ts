@@ -31,6 +31,8 @@ interface CreateOrderRequest {
 }
 
 serve(async (req) => {
+  const startTime = Date.now();
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -39,97 +41,24 @@ serve(async (req) => {
   try {
     const body: CreateOrderRequest = await req.json();
     
-    // Validate required fields
-    if (!body.customer_name?.trim()) {
+    // === VALIDATION PHASE ===
+    const validationError = validateOrderRequest(body);
+    if (validationError) {
+      console.log(`Validation failed: ${validationError}`);
       return new Response(
-        JSON.stringify({ error: 'اسم العميل مطلوب' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    if (!body.customer_phone?.trim()) {
-      return new Response(
-        JSON.stringify({ error: 'رقم الهاتف مطلوب' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    if (!body.customer_address?.trim()) {
-      return new Response(
-        JSON.stringify({ error: 'العنوان مطلوب' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    if (!body.governorate?.trim()) {
-      return new Response(
-        JSON.stringify({ error: 'المحافظة مطلوبة' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    if (!body.payment_method?.trim()) {
-      return new Response(
-        JSON.stringify({ error: 'طريقة الدفع مطلوبة' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    if (!body.items || body.items.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'يجب إضافة منتج واحد على الأقل' }),
+        JSON.stringify({ error: validationError }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate numeric fields
-    if (typeof body.subtotal !== 'number' || body.subtotal < 0) {
-      return new Response(
-        JSON.stringify({ error: 'المجموع الفرعي غير صالح' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    if (typeof body.delivery_fee !== 'number' || body.delivery_fee < 0) {
-      return new Response(
-        JSON.stringify({ error: 'رسوم التوصيل غير صالحة' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    if (typeof body.total !== 'number' || body.total < 0) {
-      return new Response(
-        JSON.stringify({ error: 'المجموع غير صالح' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate items
-    for (const item of body.items) {
-      if (!item.product_name?.trim() || typeof item.product_price !== 'number' || typeof item.quantity !== 'number') {
-        return new Response(
-          JSON.stringify({ error: 'بيانات المنتجات غير صالحة' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    // Validate email format if provided
-    if (body.customer_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.customer_email)) {
-      return new Response(
-        JSON.stringify({ error: 'البريد الإلكتروني غير صالح' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Creating order for:', body.customer_name, 'Phone:', body.customer_phone, 'Email:', body.customer_email || 'N/A');
+    console.log(`Creating order for: ${body.customer_name}, Items: ${body.items.length}`);
 
     // Create Supabase client with service role to bypass RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check stock availability for all items
+    // === STOCK CHECK PHASE (Single Query) ===
     const productIds = body.items.filter(item => item.product_id).map(item => item.product_id);
     
     if (productIds.length > 0) {
@@ -146,50 +75,20 @@ serve(async (req) => {
         );
       }
 
-      // Validate stock for each item
-      for (const item of body.items) {
-        if (!item.product_id) continue;
-        
-        const product = products?.find(p => p.id === item.product_id);
-        
-        if (!product) {
-          return new Response(
-            JSON.stringify({ error: `المنتج "${item.product_name}" غير موجود` }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        // Check if product is in stock
-        if (product.in_stock === false) {
-          return new Response(
-            JSON.stringify({ error: `المنتج "${item.product_name}" غير متوفر حالياً` }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        // Check if stock_count is sufficient (if stock_count is tracked)
-        if (product.stock_count !== null && product.stock_count < item.quantity) {
-          if (product.stock_count === 0) {
-            return new Response(
-              JSON.stringify({ error: `المنتج "${item.product_name}" نفذ من المخزون` }),
-              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
-          return new Response(
-            JSON.stringify({ error: `الكمية المطلوبة من "${item.product_name}" غير متوفرة. المتاح: ${product.stock_count} قطعة فقط` }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+      // Validate stock for all items at once
+      const stockError = validateStock(body.items, products || []);
+      if (stockError) {
+        console.log(`Stock validation failed: ${stockError}`);
+        return new Response(
+          JSON.stringify({ error: stockError }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
-    // Generate order number
-    const now = new Date();
-    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    const orderNumber = `HS-${dateStr}-${randomNum}`;
+    // === ORDER CREATION PHASE ===
+    const orderNumber = generateOrderNumber();
 
-    // Create order
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -210,7 +109,7 @@ serve(async (req) => {
         status: 'pending',
         payment_confirmed: false,
       })
-      .select()
+      .select('id, order_number')
       .single();
 
     if (orderError) {
@@ -221,7 +120,7 @@ serve(async (req) => {
       );
     }
 
-    // Create order items
+    // === ORDER ITEMS PHASE (Batch Insert) ===
     const orderItems = body.items.map(item => ({
       order_id: order.id,
       product_id: item.product_id || null,
@@ -244,44 +143,34 @@ serve(async (req) => {
       );
     }
 
-    // Decrease stock for each product
-    console.log('Decreasing stock for ordered items...');
-    for (const item of body.items) {
-      if (!item.product_id) continue;
-      
-      // Get current stock
-      const { data: currentProduct } = await supabase
-        .from('products')
-        .select('stock_count')
-        .eq('id', item.product_id)
-        .single();
-      
-      if (currentProduct && currentProduct.stock_count !== null) {
-        const newStockCount = Math.max(0, currentProduct.stock_count - item.quantity);
-        
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({ 
-            stock_count: newStockCount,
-            // Automatically set in_stock to false if stock is 0
-            in_stock: newStockCount > 0
-          })
-          .eq('id', item.product_id);
-        
-        if (updateError) {
-          console.error('Error updating stock for product:', item.product_id, updateError);
-        } else {
-          console.log(`Stock updated for ${item.product_name}: ${currentProduct.stock_count} -> ${newStockCount}`);
-        }
+    // === STOCK UPDATE PHASE (Batch Update using RPC) ===
+    const productUpdates = body.items
+      .filter(item => item.product_id)
+      .map(item => ({
+        product_id: item.product_id,
+        quantity: item.quantity
+      }));
+
+    if (productUpdates.length > 0) {
+      const { error: stockError } = await supabase.rpc('batch_update_stock', {
+        product_updates: JSON.stringify(productUpdates)
+      });
+
+      if (stockError) {
+        console.error('Error updating stock (non-critical):', stockError);
+        // Don't fail the order, just log the error
+      } else {
+        console.log(`Stock updated for ${productUpdates.length} products`);
       }
     }
 
-    // Increment coupon usage if coupon was used
+    // === COUPON UPDATE PHASE ===
     if (body.coupon_code) {
       await supabase.rpc('increment_coupon_usage', { coupon_code_param: body.coupon_code });
     }
 
-    console.log('Order created successfully:', orderNumber);
+    const duration = Date.now() - startTime;
+    console.log(`Order ${orderNumber} created successfully in ${duration}ms`);
 
     return new Response(
       JSON.stringify({ 
@@ -302,3 +191,61 @@ serve(async (req) => {
     );
   }
 });
+
+// === HELPER FUNCTIONS ===
+
+function validateOrderRequest(body: CreateOrderRequest): string | null {
+  if (!body.customer_name?.trim()) return 'اسم العميل مطلوب';
+  if (!body.customer_phone?.trim()) return 'رقم الهاتف مطلوب';
+  if (!body.customer_address?.trim()) return 'العنوان مطلوب';
+  if (!body.governorate?.trim()) return 'المحافظة مطلوبة';
+  if (!body.payment_method?.trim()) return 'طريقة الدفع مطلوبة';
+  if (!body.items || body.items.length === 0) return 'يجب إضافة منتج واحد على الأقل';
+  
+  if (typeof body.subtotal !== 'number' || body.subtotal < 0) return 'المجموع الفرعي غير صالح';
+  if (typeof body.delivery_fee !== 'number' || body.delivery_fee < 0) return 'رسوم التوصيل غير صالحة';
+  if (typeof body.total !== 'number' || body.total < 0) return 'المجموع غير صالح';
+
+  for (const item of body.items) {
+    if (!item.product_name?.trim() || typeof item.product_price !== 'number' || typeof item.quantity !== 'number') {
+      return 'بيانات المنتجات غير صالحة';
+    }
+  }
+
+  if (body.customer_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.customer_email)) {
+    return 'البريد الإلكتروني غير صالح';
+  }
+
+  return null;
+}
+
+function validateStock(items: OrderItem[], products: any[]): string | null {
+  for (const item of items) {
+    if (!item.product_id) continue;
+    
+    const product = products.find(p => p.id === item.product_id);
+    
+    if (!product) {
+      return `المنتج "${item.product_name}" غير موجود`;
+    }
+
+    if (product.in_stock === false) {
+      return `المنتج "${item.product_name}" غير متوفر حالياً`;
+    }
+
+    if (product.stock_count !== null && product.stock_count < item.quantity) {
+      if (product.stock_count === 0) {
+        return `المنتج "${item.product_name}" نفذ من المخزون`;
+      }
+      return `الكمية المطلوبة من "${item.product_name}" غير متوفرة. المتاح: ${product.stock_count} قطعة فقط`;
+    }
+  }
+  return null;
+}
+
+function generateOrderNumber(): string {
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `HS-${dateStr}-${randomNum}`;
+}
