@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ProductCard from './ProductCard';
 import CategoryNav from './CategoryNav';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -16,30 +17,88 @@ interface Product {
   badge: string | null;
 }
 
+const PRODUCTS_PER_PAGE = 12;
+
 const ProductGrid: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('الكل');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const fetchProducts = useCallback(async (pageNum: number, category: string, reset = false) => {
+    if (reset) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
 
-  const fetchProducts = async () => {
-    const { data, error } = await supabase
+    const from = pageNum * PRODUCTS_PER_PAGE;
+    const to = from + PRODUCTS_PER_PAGE - 1;
+
+    let query = supabase
       .from('products')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (category !== 'الكل') {
+      query = query.eq('category', category);
+    }
+
+    const { data, error } = await query;
 
     if (!error && data) {
-      setProducts(data);
+      if (reset) {
+        setProducts(data);
+      } else {
+        setProducts(prev => [...prev, ...data]);
+      }
+      setHasMore(data.length === PRODUCTS_PER_PAGE);
     }
-    setLoading(false);
-  };
 
-  const filteredProducts = selectedCategory === 'الكل'
-    ? products
-    : products.filter(product => product.category === selectedCategory);
+    setLoading(false);
+    setLoadingMore(false);
+  }, []);
+
+  // Initial load and category change
+  useEffect(() => {
+    setPage(0);
+    setProducts([]);
+    setHasMore(true);
+    fetchProducts(0, selectedCategory, true);
+  }, [selectedCategory, fetchProducts]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (loading) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          setPage(prev => {
+            const nextPage = prev + 1;
+            fetchProducts(nextPage, selectedCategory);
+            return nextPage;
+          });
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [loading, hasMore, loadingMore, selectedCategory, fetchProducts]);
 
   return (
     <>
@@ -79,19 +138,36 @@ const ProductGrid: React.FC = () => {
 
           {/* Products Grid */}
           {!loading && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-              {filteredProducts.map((product, index) => (
-                <div
-                  key={product.id}
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+                {products.map((product, index) => (
+                  <div
+                    key={product.id}
+                    style={{ animationDelay: `${Math.min(index, 11) * 0.05}s` }}
+                  >
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Load More Trigger */}
+              <div ref={loadMoreRef} className="py-8 flex justify-center">
+                {loadingMore && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>جاري تحميل المزيد...</span>
+                  </div>
+                )}
+                {!hasMore && products.length > 0 && (
+                  <p className="text-muted-foreground text-sm">
+                    تم عرض جميع المنتجات
+                  </p>
+                )}
+              </div>
+            </>
           )}
 
-          {!loading && filteredProducts.length === 0 && (
+          {!loading && products.length === 0 && (
             <div className="text-center py-8 md:py-12">
               <p className="text-muted-foreground text-base md:text-lg">
                 لا توجد منتجات في هذه الفئة حالياً
