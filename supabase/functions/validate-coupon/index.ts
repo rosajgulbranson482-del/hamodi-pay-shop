@@ -7,8 +7,12 @@ const corsHeaders = {
 };
 
 // Rate limiting configuration
-const MAX_ATTEMPTS = 5; // Max attempts per hour
-const BLOCK_DURATION_MINUTES = 60; // Block duration in minutes
+const MAX_ATTEMPTS = 5;
+const BLOCK_DURATION_MINUTES = 60;
+
+// Simple in-memory cache for coupons (reset on function restart)
+const couponCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 60000; // 1 minute cache
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -24,10 +28,7 @@ serve(async (req) => {
                      req.headers.get('x-real-ip') || 
                      'unknown';
 
-    console.log('Coupon validation attempt from IP:', clientIP);
-
     if (!code || typeof code !== 'string') {
-      console.error('Invalid coupon code provided');
       return new Response(
         JSON.stringify({ valid: false, error: 'كود الكوبون مطلوب' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -36,46 +37,39 @@ serve(async (req) => {
 
     const sanitizedCode = code.trim().toUpperCase();
     
-    // Validate code format (prevent injection)
+    // Validate code format
     if (sanitizedCode.length > 50 || !/^[A-Z0-9_-]+$/.test(sanitizedCode)) {
-      console.error('Invalid coupon code format:', sanitizedCode);
       return new Response(
         JSON.stringify({ valid: false, error: 'صيغة الكوبون غير صحيحة' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Validating coupon:', sanitizedCode);
+    console.log(`Validating coupon: ${sanitizedCode} from IP: ${clientIP}`);
 
-    // Create Supabase client with service role to bypass RLS
+    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check rate limiting - count failed attempts in the last hour
+    // Check rate limiting
     const oneHourAgo = new Date(Date.now() - BLOCK_DURATION_MINUTES * 60 * 1000).toISOString();
     
-    const { count: failedAttempts, error: countError } = await supabase
+    const { count: failedAttempts } = await supabase
       .from('coupon_attempts')
       .select('*', { count: 'exact', head: true })
       .eq('ip_address', clientIP)
       .eq('success', false)
       .gte('created_at', oneHourAgo);
 
-    if (countError) {
-      console.error('Error checking rate limit:', countError);
-    }
-
     const currentAttempts = failedAttempts || 0;
-    console.log(`IP ${clientIP} has ${currentAttempts} failed attempts in the last hour`);
 
-    // Check if blocked
     if (currentAttempts >= MAX_ATTEMPTS) {
-      console.log(`IP ${clientIP} is blocked due to too many failed attempts`);
+      console.log(`IP ${clientIP} blocked - too many attempts`);
       return new Response(
         JSON.stringify({ 
           valid: false, 
-          error: `تم حظرك مؤقتاً بسبب كثرة المحاولات الفاشلة. حاول مرة أخرى بعد ساعة.`,
+          error: 'تم حظرك مؤقتاً بسبب كثرة المحاولات الفاشلة. حاول مرة أخرى بعد ساعة.',
           blocked: true,
           remainingAttempts: 0
         }),
@@ -83,20 +77,34 @@ serve(async (req) => {
       );
     }
 
-    // Fetch coupon with service role
-    const { data: coupon, error: couponError } = await supabase
-      .from('coupons')
-      .select('code, discount_type, discount_value, expires_at, max_uses, used_count, min_order_amount, is_active')
-      .eq('code', sanitizedCode)
-      .eq('is_active', true)
-      .maybeSingle();
+    // Check cache first
+    const cached = couponCache.get(sanitizedCode);
+    let coupon = null;
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      coupon = cached.data;
+      console.log(`Cache hit for coupon: ${sanitizedCode}`);
+    } else {
+      // Fetch coupon from database
+      const { data, error: couponError } = await supabase
+        .from('coupons')
+        .select('code, discount_type, discount_value, expires_at, max_uses, used_count, min_order_amount, is_active')
+        .eq('code', sanitizedCode)
+        .eq('is_active', true)
+        .maybeSingle();
 
-    if (couponError) {
-      console.error('Database error:', couponError);
-      return new Response(
-        JSON.stringify({ valid: false, error: 'حدث خطأ في التحقق من الكوبون' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (couponError) {
+        console.error('Database error:', couponError);
+        return new Response(
+          JSON.stringify({ valid: false, error: 'حدث خطأ في التحقق من الكوبون' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      coupon = data;
+      if (coupon) {
+        couponCache.set(sanitizedCode, { data: coupon, timestamp: Date.now() });
+      }
     }
 
     // Log the attempt
@@ -107,15 +115,14 @@ serve(async (req) => {
       success: isValid,
     });
 
-    // Cleanup old attempts occasionally (1% chance per request)
-    if (Math.random() < 0.01) {
+    // Cleanup old attempts (5% chance to reduce frequency)
+    if (Math.random() < 0.05) {
       console.log('Running cleanup of old coupon attempts');
-      await supabase.rpc('cleanup_old_coupon_attempts');
+      await supabase.rpc('auto_cleanup_old_data');
     }
 
     if (!coupon) {
       const remainingAttempts = MAX_ATTEMPTS - currentAttempts - 1;
-      console.log('Coupon not found:', sanitizedCode, `Remaining attempts: ${remainingAttempts}`);
       return new Response(
         JSON.stringify({ 
           valid: false, 
@@ -128,7 +135,6 @@ serve(async (req) => {
 
     // Check expiry
     if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
-      console.log('Coupon expired:', sanitizedCode);
       return new Response(
         JSON.stringify({ valid: false, error: 'انتهت صلاحية هذا الكوبون' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -137,7 +143,6 @@ serve(async (req) => {
 
     // Check max uses
     if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
-      console.log('Coupon usage limit reached:', sanitizedCode);
       return new Response(
         JSON.stringify({ valid: false, error: 'تم استنفاد عدد استخدامات هذا الكوبون' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -147,7 +152,6 @@ serve(async (req) => {
     // Check minimum order amount
     const total = orderTotal || 0;
     if (coupon.min_order_amount && total < coupon.min_order_amount) {
-      console.log('Order total below minimum:', total, 'required:', coupon.min_order_amount);
       return new Response(
         JSON.stringify({ 
           valid: false, 
@@ -164,13 +168,10 @@ serve(async (req) => {
     } else {
       discountAmount = coupon.discount_value;
     }
-
-    // Don't let discount exceed total
     discountAmount = Math.min(discountAmount, total);
 
-    console.log('Coupon validated successfully:', sanitizedCode, 'discount:', discountAmount);
+    console.log(`Coupon validated: ${sanitizedCode}, discount: ${discountAmount}`);
 
-    // Return only necessary info - NOT exposing max_uses, used_count, expires_at
     return new Response(
       JSON.stringify({
         valid: true,
