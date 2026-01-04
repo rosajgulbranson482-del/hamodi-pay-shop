@@ -300,7 +300,7 @@ const CheckoutContent: React.FC = () => {
         description: "يجب تسجيل الدخول أولاً لإتمام الطلب",
         variant: "destructive",
       });
-      navigate('/customer-auth');
+      navigate('/auth?redirect=checkout');
       return;
     }
 

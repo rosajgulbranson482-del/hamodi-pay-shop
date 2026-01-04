@@ -232,7 +232,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         variant: "destructive",
       });
       onClose();
-      navigate('/customer-auth?redirect=checkout');
+      navigate('/auth?redirect=checkout');
       return;
     }
 
