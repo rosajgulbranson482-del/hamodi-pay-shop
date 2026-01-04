@@ -280,6 +280,16 @@ const CheckoutContent: React.FC = () => {
   };
 
   const handleSubmitOrder = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "يرجى تسجيل الدخول",
+        description: "يجب تسجيل الدخول أولاً لإتمام الطلب",
+        variant: "destructive",
+      });
+      navigate('/customer-auth');
+      return;
+    }
+
     if (!formData.name || !formData.phone || !formData.center || !formData.address) {
       toast({
         title: "خطأ",
