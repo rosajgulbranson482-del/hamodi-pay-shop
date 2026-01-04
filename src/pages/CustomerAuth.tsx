@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,9 @@ const signupSchema = loginSchema.extend({
 
 const CustomerAuth: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const redirectTo = searchParams.get('redirect');
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -41,12 +43,22 @@ const CustomerAuth: React.FC = () => {
           _role: 'admin'
         });
         if (isMounted) {
-          navigate(isAdmin ? '/admin' : '/');
+          if (isAdmin) {
+            navigate('/admin');
+          } else if (redirectTo === 'checkout') {
+            navigate('/checkout');
+          } else {
+            navigate('/');
+          }
         }
       } catch (error) {
         console.error('Error checking role:', error);
         if (isMounted) {
-          navigate('/');
+          if (redirectTo === 'checkout') {
+            navigate('/checkout');
+          } else {
+            navigate('/');
+          }
         }
       }
     };
