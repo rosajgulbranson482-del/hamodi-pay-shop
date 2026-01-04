@@ -129,6 +129,60 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check stock availability for all items
+    const productIds = body.items.filter(item => item.product_id).map(item => item.product_id);
+    
+    if (productIds.length > 0) {
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('id, name, stock_count, in_stock')
+        .in('id', productIds);
+
+      if (productsError) {
+        console.error('Error fetching products:', productsError);
+        return new Response(
+          JSON.stringify({ error: 'حدث خطأ أثناء التحقق من المخزون' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Validate stock for each item
+      for (const item of body.items) {
+        if (!item.product_id) continue;
+        
+        const product = products?.find(p => p.id === item.product_id);
+        
+        if (!product) {
+          return new Response(
+            JSON.stringify({ error: `المنتج "${item.product_name}" غير موجود` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Check if product is in stock
+        if (product.in_stock === false) {
+          return new Response(
+            JSON.stringify({ error: `المنتج "${item.product_name}" غير متوفر حالياً` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Check if stock_count is sufficient (if stock_count is tracked)
+        if (product.stock_count !== null && product.stock_count < item.quantity) {
+          if (product.stock_count === 0) {
+            return new Response(
+              JSON.stringify({ error: `المنتج "${item.product_name}" نفذ من المخزون` }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          return new Response(
+            JSON.stringify({ error: `الكمية المطلوبة من "${item.product_name}" غير متوفرة. المتاح: ${product.stock_count} قطعة فقط` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
     // Generate order number
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
@@ -188,6 +242,38 @@ serve(async (req) => {
         JSON.stringify({ error: 'حدث خطأ أثناء إضافة المنتجات' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Decrease stock for each product
+    console.log('Decreasing stock for ordered items...');
+    for (const item of body.items) {
+      if (!item.product_id) continue;
+      
+      // Get current stock
+      const { data: currentProduct } = await supabase
+        .from('products')
+        .select('stock_count')
+        .eq('id', item.product_id)
+        .single();
+      
+      if (currentProduct && currentProduct.stock_count !== null) {
+        const newStockCount = Math.max(0, currentProduct.stock_count - item.quantity);
+        
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ 
+            stock_count: newStockCount,
+            // Automatically set in_stock to false if stock is 0
+            in_stock: newStockCount > 0
+          })
+          .eq('id', item.product_id);
+        
+        if (updateError) {
+          console.error('Error updating stock for product:', item.product_id, updateError);
+        } else {
+          console.log(`Stock updated for ${item.product_name}: ${currentProduct.stock_count} -> ${newStockCount}`);
+        }
+      }
     }
 
     // Increment coupon usage if coupon was used

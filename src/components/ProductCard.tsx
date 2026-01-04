@@ -24,6 +24,7 @@ interface Product {
   category: string;
   in_stock: boolean | null;
   badge: string | null;
+  stock_count?: number | null;
 }
 
 interface ProductCardProps {
@@ -43,7 +44,8 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
   const discount = product.original_price
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
-  const inStock = product.in_stock !== false;
+  // Check stock: out of stock if in_stock is false OR stock_count is 0
+  const inStock = product.in_stock !== false && (product.stock_count === null || product.stock_count === undefined || product.stock_count > 0);
 
   // Build all images array: main image + additional images
   const allImages = [
