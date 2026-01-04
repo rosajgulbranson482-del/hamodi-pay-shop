@@ -6,13 +6,14 @@ import { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Zap, LogOut, Package, ShoppingBag, Bell, Loader2, Ticket, Star, BarChart3, MapPin } from 'lucide-react';
+import { Zap, LogOut, Package, ShoppingBag, Bell, Loader2, Ticket, Star, BarChart3, MapPin, BellRing } from 'lucide-react';
 import AdminOrders from '@/components/admin/AdminOrders';
 import AdminProducts from '@/components/admin/AdminProducts';
 import AdminCoupons from '@/components/admin/AdminCoupons';
 import AdminReviews from '@/components/admin/AdminReviews';
 import AdminStats from '@/components/admin/AdminStats';
 import AdminGovernorates from '@/components/admin/AdminGovernorates';
+import AdminStockNotifications from '@/components/admin/AdminStockNotifications';
 import { Badge } from '@/components/ui/badge';
 
 const Admin: React.FC = () => {
@@ -213,7 +214,7 @@ const Admin: React.FC = () => {
       {/* Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="stats" className="space-y-4 md:space-y-6" onValueChange={() => setNewOrdersCount(0)}>
-          <TabsList className="grid w-full max-w-4xl grid-cols-6 h-auto p-1">
+          <TabsList className="grid w-full max-w-5xl grid-cols-7 h-auto p-1">
             <TabsTrigger value="stats" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">الإحصائيات</span>
@@ -239,6 +240,10 @@ const Admin: React.FC = () => {
               <MapPin className="w-4 h-4" />
               <span className="hidden sm:inline">المحافظات</span>
             </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
+              <BellRing className="w-4 h-4" />
+              <span className="hidden sm:inline">الإشعارات</span>
+            </TabsTrigger>
             <TabsTrigger value="reviews" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
               <Star className="w-4 h-4" />
               <span className="hidden sm:inline">التقييمات</span>
@@ -263,6 +268,10 @@ const Admin: React.FC = () => {
 
           <TabsContent value="governorates">
             <AdminGovernorates />
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <AdminStockNotifications />
           </TabsContent>
 
           <TabsContent value="reviews">
