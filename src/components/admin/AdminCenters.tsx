@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, MapPin, Truck } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Truck, Save, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 // مراكز محافظة الشرقية - يتم تخزينها محلياً
 const DEFAULT_CENTERS = [
@@ -54,9 +55,6 @@ const DEFAULT_CENTERS = [
   'صان الحجر',
 ];
 
-const DELIVERY_FEE = 50;
-const DELIVERY_DAYS = '1-3 أيام';
-
 const AdminCenters: React.FC = () => {
   const { toast } = useToast();
   const [centers, setCenters] = useState<string[]>(DEFAULT_CENTERS);
@@ -64,6 +62,87 @@ const AdminCenters: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCenter, setEditingCenter] = useState<string | null>(null);
   const [newCenterName, setNewCenterName] = useState('');
+  
+  // Delivery settings state
+  const [deliveryFee, setDeliveryFee] = useState(50);
+  const [deliveryDays, setDeliveryDays] = useState('1-3 أيام');
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [isEditingSettings, setIsEditingSettings] = useState(false);
+
+  // Fetch delivery settings from database
+  useEffect(() => {
+    const fetchDeliverySettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('delivery_settings')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          setDeliveryFee(Number(data.delivery_fee));
+          setDeliveryDays(data.delivery_days);
+        }
+      } catch (err) {
+        console.error('Error fetching delivery settings:', err);
+      } finally {
+        setLoadingSettings(false);
+      }
+    };
+
+    fetchDeliverySettings();
+  }, []);
+
+  const handleSaveDeliverySettings = async () => {
+    setSavingSettings(true);
+    
+    try {
+      // First check if settings exist
+      const { data: existing } = await supabase
+        .from('delivery_settings')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing settings
+        const { error } = await supabase
+          .from('delivery_settings')
+          .update({
+            delivery_fee: deliveryFee,
+            delivery_days: deliveryDays,
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new settings
+        const { error } = await supabase
+          .from('delivery_settings')
+          .insert({
+            delivery_fee: deliveryFee,
+            delivery_days: deliveryDays,
+          });
+
+        if (error) throw error;
+      }
+
+      toast({ title: 'تم الحفظ', description: 'تم تحديث إعدادات الشحن بنجاح' });
+      setIsEditingSettings(false);
+    } catch (err) {
+      console.error('Error saving delivery settings:', err);
+      toast({ 
+        title: 'خطأ', 
+        description: 'حدث خطأ أثناء حفظ الإعدادات', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const handleAddCenter = () => {
     if (!newCenterName.trim()) {
@@ -151,19 +230,80 @@ const AdminCenters: React.FC = () => {
         </Dialog>
       </CardHeader>
       <CardContent>
-        {/* Delivery Info */}
+        {/* Delivery Settings */}
         <div className="mb-4 p-4 bg-muted/50 rounded-lg border border-border">
-          <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Truck className="w-5 h-5 text-primary" />
-              <span className="font-medium">مصاريف الشحن:</span>
-              <Badge variant="secondary">{DELIVERY_FEE} ج.م</Badge>
+              <span className="font-bold">إعدادات الشحن</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">مدة التوصيل:</span>
-              <Badge variant="outline">{DELIVERY_DAYS}</Badge>
-            </div>
+            {!isEditingSettings ? (
+              <Button variant="outline" size="sm" onClick={() => setIsEditingSettings(true)}>
+                <Pencil className="w-4 h-4 ml-2" />
+                تعديل
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIsEditingSettings(false)}
+                  disabled={savingSettings}
+                >
+                  إلغاء
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={handleSaveDeliverySettings}
+                  disabled={savingSettings}
+                >
+                  {savingSettings ? (
+                    <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 ml-2" />
+                  )}
+                  حفظ
+                </Button>
+              </div>
+            )}
           </div>
+          
+          {loadingSettings ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : isEditingSettings ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>مصاريف الشحن (ج.م)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={deliveryFee}
+                  onChange={(e) => setDeliveryFee(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>مدة التوصيل</Label>
+                <Input
+                  placeholder="مثال: 1-3 أيام"
+                  value={deliveryDays}
+                  onChange={(e) => setDeliveryDays(e.target.value)}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">مصاريف الشحن:</span>
+                <Badge variant="secondary">{deliveryFee} ج.م</Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">مدة التوصيل:</span>
+                <Badge variant="outline">{deliveryDays}</Badge>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="overflow-x-auto">
