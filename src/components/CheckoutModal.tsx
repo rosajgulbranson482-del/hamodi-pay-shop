@@ -12,12 +12,26 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
-interface Governorate {
-  id: string;
-  name: string;
-  delivery_fee: number;
-  delivery_days: string;
-}
+// مراكز محافظة الشرقية
+const SHARQIA_CENTERS = [
+  'الزقازيق',
+  'بلبيس',
+  'منيا القمح',
+  'أبو حماد',
+  'أبو كبير',
+  'فاقوس',
+  'الحسينية',
+  'ههيا',
+  'كفر صقر',
+  'أولاد صقر',
+  'الإبراهيمية',
+  'ديرب نجم',
+  'القرين',
+  'مشتول السوق',
+  'القنايات',
+  'العاشر من رمضان',
+  'صان الحجر',
+];
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -62,12 +76,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
-    governorate: '',
+    governorate: 'الشرقية',
+    center: '',
     address: '',
     notes: '',
     verificationCode: '',
@@ -80,23 +94,34 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+  
+  // Delivery settings state
+  const [deliveryFee, setDeliveryFee] = useState(50);
+  const [deliveryDays, setDeliveryDays] = useState('1-3 أيام');
 
-  // Fetch governorates from database
+  // Fetch delivery settings from database
   useEffect(() => {
-    const fetchGovernorates = async () => {
-      const { data } = await supabase
-        .from('governorates')
-        .select('id, name, delivery_fee, delivery_days')
-        .eq('is_active', true)
-        .order('name');
-      
-      if (data) {
-        setGovernorates(data);
+    const fetchDeliverySettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('delivery_settings')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          setDeliveryFee(Number(data.delivery_fee));
+          setDeliveryDays(data.delivery_days);
+        }
+      } catch (err) {
+        console.error('Error fetching delivery settings:', err);
       }
     };
     
     if (isOpen) {
-      fetchGovernorates();
+      fetchDeliverySettings();
     }
   }, [isOpen]);
 
@@ -108,7 +133,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         name: profile.full_name || prev.name,
         phone: profile.phone || prev.phone,
         address: profile.default_address || prev.address,
-        governorate: profile.default_governorate || prev.governorate,
       }));
       // Auto-verify phone for authenticated users
       if (profile.phone) {
@@ -117,8 +141,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     }
   }, [isAuthenticated, profile]);
 
-  const selectedGovernorate = governorates.find(g => g.id === formData.governorate);
-  const deliveryFee = selectedGovernorate?.delivery_fee || 0;
   const discountAmount = appliedCoupon?.discount_amount || 0;
   const finalTotal = Math.max(0, totalPrice + deliveryFee - discountAmount);
 
@@ -236,7 +258,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    if (!formData.name || !formData.phone || !formData.governorate || !formData.address) {
+    if (!formData.name || !formData.phone || !formData.center || !formData.address) {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع البيانات المطلوبة",
@@ -286,8 +308,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
           customer_name: formData.name,
           customer_phone: formData.phone,
           customer_email: formData.email || null,
-          customer_address: formData.address,
-          governorate: selectedGovernorate?.name || '',
+          customer_address: `${formData.center} - ${formData.address}`,
+          governorate: formData.governorate,
           payment_method: formData.paymentMethod,
           notes: formData.notes || null,
           coupon_code: appliedCoupon?.code || null,
@@ -328,7 +350,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
 
 👤 *العميل:* ${formData.name}
 📱 *الهاتف:* ${formData.phone}
-📍 *المحافظة:* ${selectedGovernorate?.name}
+📍 *المحافظة:* ${formData.governorate}
+🏘️ *المركز:* ${formData.center}
 🏠 *العنوان:* ${formData.address}
 ${formData.notes ? `📝 *ملاحظات:* ${formData.notes}` : ''}
 
@@ -357,7 +380,8 @@ ${orderItemsText}
         name: '',
         phone: '',
         email: '',
-        governorate: '',
+        governorate: 'الشرقية',
+        center: '',
         address: '',
         notes: '',
         verificationCode: '',
@@ -467,28 +491,38 @@ ${orderItemsText}
                 />
               </div>
 
-              {/* Governorate */}
+              {/* Governorate - Fixed */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-primary" />
                   المحافظة
                 </Label>
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg border border-border">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span className="font-medium">الشرقية</span>
+                  <span className="text-sm text-muted-foreground mr-auto">
+                    (توصيل: {deliveryFee} ج.م - {deliveryDays})
+                  </span>
+                </div>
+              </div>
+
+              {/* Center Selection */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  المركز <span className="text-destructive">*</span>
+                </Label>
                 <Select
-                  value={formData.governorate}
-                  onValueChange={(value) => handleInputChange('governorate', value)}
+                  value={formData.center}
+                  onValueChange={(value) => handleInputChange('center', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر المحافظة" />
+                    <SelectValue placeholder="اختر المركز" />
                   </SelectTrigger>
                   <SelectContent>
-                    {governorates.map((gov) => (
-                      <SelectItem key={gov.id} value={gov.id}>
-                        <div className="flex items-center justify-between w-full gap-4">
-                          <span>{gov.name}</span>
-                          <span className="text-muted-foreground text-sm">
-                            توصيل: {gov.delivery_fee} ج.م ({gov.delivery_days})
-                          </span>
-                        </div>
+                    {SHARQIA_CENTERS.map((center) => (
+                      <SelectItem key={center} value={center}>
+                        {center}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -617,7 +651,7 @@ ${orderItemsText}
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    التوصيل {selectedGovernorate ? `(${selectedGovernorate.name})` : ''}
+                    التوصيل (الشرقية)
                   </span>
                   <span>{deliveryFee} ج.م</span>
                 </div>
@@ -711,7 +745,7 @@ ${orderItemsText}
                   <li>• قم بتحويل المبلغ الإجمالي على الرقم المذكور</li>
                   <li>• احتفظ بصورة إيصال التحويل</li>
                   <li>• سنتواصل معك لتأكيد الطلب خلال ساعات</li>
-                  <li>• التوصيل خلال {selectedGovernorate?.delivery_days || '2-5 أيام'}</li>
+                  <li>• التوصيل خلال {deliveryDays}</li>
                 </ul>
               </div>
 
