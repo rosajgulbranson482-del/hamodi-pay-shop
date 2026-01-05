@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, Send, Bell, Package, Mail, Phone, CheckCircle2, Clock } from 'lucide-react';
+import { Loader2, Trash2, Bell, Package, Mail, Phone, CheckCircle2, Clock, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
@@ -36,7 +36,6 @@ const AdminStockNotifications: React.FC = () => {
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<StockNotification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const fetchNotifications = async () => {
@@ -95,30 +94,43 @@ const AdminStockNotifications: React.FC = () => {
     setDeleting(null);
   };
 
-  const handleSendNotification = async (productId: string) => {
-    setSending(productId);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('send-stock-notification', {
-        body: { product_id: productId }
-      });
-
-      if (error) throw error;
-
+  const openWhatsApp = async (notification: StockNotification) => {
+    if (!notification.phone) {
       toast({ 
-        title: "تم الإرسال", 
-        description: `تم إرسال ${data.sent} إشعار بنجاح` 
-      });
-      fetchNotifications();
-    } catch (error: any) {
-      toast({ 
-        title: "خطأ", 
-        description: error.message || "فشل في إرسال الإشعارات", 
+        title: "لا يوجد رقم هاتف", 
+        description: "هذا العميل لم يسجل رقم هاتف", 
         variant: "destructive" 
       });
+      return;
     }
+
+    const productName = notification.product?.name || 'المنتج';
+    const message = `مرحباً! 🎉\n\nنود إعلامك بأن المنتج "${productName}" الذي كنت تنتظره أصبح متوفراً الآن في متجرنا!\n\nسارع بالطلب قبل نفاذ الكمية.`;
     
-    setSending(null);
+    // Format phone number (remove spaces and ensure it starts with country code)
+    let phone = notification.phone.replace(/\s+/g, '').replace(/-/g, '');
+    if (phone.startsWith('0')) {
+      phone = '20' + phone.substring(1); // Egypt country code
+    } else if (!phone.startsWith('+') && !phone.startsWith('20')) {
+      phone = '20' + phone;
+    }
+    phone = phone.replace('+', '');
+    
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+
+    // Mark as notified
+    await supabase
+      .from('stock_notifications')
+      .update({ notified: true, notified_at: new Date().toISOString() })
+      .eq('id', notification.id);
+
+    toast({ 
+      title: "تم فتح WhatsApp", 
+      description: "تم تحديث حالة الإشعار" 
+    });
+    
+    fetchNotifications();
   };
 
   const pendingNotifications = notifications.filter(n => !n.notified);
@@ -199,20 +211,6 @@ const AdminStockNotifications: React.FC = () => {
                     </div>
                   </div>
                   
-                  {product?.in_stock && (product?.stock_count ?? 0) > 0 && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleSendNotification(productId)}
-                      disabled={sending === productId}
-                    >
-                      {sending === productId ? (
-                        <Loader2 className="w-4 h-4 animate-spin ml-2" />
-                      ) : (
-                        <Send className="w-4 h-4 ml-2" />
-                      )}
-                      إرسال الإشعارات
-                    </Button>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -238,19 +236,32 @@ const AdminStockNotifications: React.FC = () => {
                           {format(new Date(notification.created_at), 'dd MMM yyyy - hh:mm a', { locale: ar })}
                         </span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDelete(notification.id)}
-                        disabled={deleting === notification.id}
-                      >
-                        {deleting === notification.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
+                      <div className="flex items-center gap-2">
+                        {notification.phone && product?.in_stock && (product?.stock_count ?? 0) > 0 && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => openWhatsApp(notification)}
+                          >
+                            <MessageCircle className="w-4 h-4 ml-1" />
+                            واتساب
+                          </Button>
                         )}
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(notification.id)}
+                          disabled={deleting === notification.id}
+                        >
+                          {deleting === notification.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
