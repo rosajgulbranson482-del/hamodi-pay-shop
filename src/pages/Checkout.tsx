@@ -259,6 +259,11 @@ const CheckoutContent: React.FC = () => {
     });
   };
 
+  const validatePhone = (phone: string): boolean => {
+    const phoneRegex = /^01[0-9]{9}$/;
+    return phoneRegex.test(phone);
+  };
+
   const handleSubmitOrder = () => {
     if (!isAuthenticated) {
       toast({
@@ -274,6 +279,15 @@ const CheckoutContent: React.FC = () => {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع البيانات المطلوبة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validatePhone(formData.phone)) {
+      toast({
+        title: "خطأ في رقم الهاتف",
+        description: "يجب أن يبدأ رقم الهاتف بـ 01 ويتكون من 11 رقم",
         variant: "destructive",
       });
       return;
