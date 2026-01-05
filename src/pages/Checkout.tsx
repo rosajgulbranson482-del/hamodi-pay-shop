@@ -808,6 +808,7 @@ ${orderItemsText}
                             size="icon"
                             className="h-6 w-6"
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            disabled={item.stockCount !== null && item.stockCount !== undefined && item.quantity >= item.stockCount}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>

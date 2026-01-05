@@ -93,12 +93,13 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
       name: product.name,
       price: product.price,
       image: product.image || '',
+      stockCount: product.stock_count,
     });
     toast({
       title: "تمت الإضافة للسلة",
       description: `تم إضافة ${product.name} إلى سلة التسوق`,
     });
-  }, [inStock, addToCart, product.id, product.name, product.price, product.image, toast]);
+  }, [inStock, addToCart, product.id, product.name, product.price, product.image, product.stock_count, toast]);
 
   const handleToggleFavorite = useCallback((e: React.MouseEvent) => {
     e.preventDefault();

@@ -130,6 +130,7 @@ const ProductDetailsContent = () => {
         name: product.name,
         price: product.price,
         image: product.image || '',
+        stockCount: product.stock_count,
       });
     }
     

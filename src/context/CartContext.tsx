@@ -13,7 +13,7 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: { id: string; name: string; price: number; image: string }) => void;
+  addToCart: (product: { id: string; name: string; price: number; image: string; stockCount?: number | null }) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -36,6 +36,37 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Save to localStorage
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(items));
+  }, [items]);
+
+  // Hydrate stock counts for items loaded from localStorage (so users can't exceed stock)
+  useEffect(() => {
+    const missingStock = items.filter(i => i.stockCount === undefined);
+    if (missingStock.length === 0) return;
+
+    const ids = Array.from(new Set(missingStock.map(i => i.id)));
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, stock_count')
+          .in('id', ids);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setItems(prev =>
+            prev.map(it => {
+              if (it.stockCount !== undefined) return it;
+              const p = data.find(d => d.id === it.id);
+              return p ? { ...it, stockCount: p.stock_count } : it;
+            })
+          );
+        }
+      } catch (err) {
+        console.error('Error hydrating cart stock counts:', err);
+      }
+    })();
   }, [items]);
 
   // Load cart from database when user logs in
