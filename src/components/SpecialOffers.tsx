@@ -117,6 +117,8 @@ const SpecialOffers: React.FC = () => {
         .from('products')
         .select('id, name, price, original_price, image, badge, stock_count, in_stock')
         .not('original_price', 'is', null)
+        .eq('in_stock', true)
+        .gt('stock_count', 0)
         .order('created_at', { ascending: false })
         .limit(10);
 
