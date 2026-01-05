@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CartProvider } from '@/context/CartContext';
+import CouponSuggestion from '@/components/CouponSuggestion';
 
 
 interface AppliedCoupon {
@@ -170,10 +171,15 @@ const CheckoutContent: React.FC = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) {
+  const applyCoupon = async (codeToApply?: string) => {
+    const code = codeToApply || couponCode;
+    if (!code.trim()) {
       toast({ title: "خطأ", description: "يرجى إدخال كود الكوبون", variant: "destructive" });
       return;
+    }
+
+    if (codeToApply) {
+      setCouponCode(codeToApply);
     }
 
     setApplyingCoupon(true);
@@ -181,7 +187,7 @@ const CheckoutContent: React.FC = () => {
     try {
       const { data, error } = await supabase.functions.invoke('validate-coupon', {
         body: {
-          code: couponCode,
+          code: code,
           orderTotal: totalPrice,
         }
       });
@@ -687,6 +693,14 @@ ${orderItemsText}
                     )}
                   </div>
 
+                  {/* Coupon Suggestion */}
+                  {!appliedCoupon && (
+                    <CouponSuggestion 
+                      onApply={(code) => applyCoupon(code)} 
+                      appliedCouponCode={appliedCoupon?.code}
+                    />
+                  )}
+
                   {/* Coupon */}
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
@@ -713,7 +727,7 @@ ${orderItemsText}
                           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                           className="flex-1"
                         />
-                        <Button onClick={applyCoupon} disabled={applyingCoupon}>
+                        <Button onClick={() => applyCoupon()} disabled={applyingCoupon}>
                           {applyingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تطبيق'}
                         </Button>
                       </div>
