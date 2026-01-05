@@ -237,7 +237,7 @@ const AdminStockNotifications: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        {notification.phone && product?.in_stock && (product?.stock_count ?? 0) > 0 && (
+                        {notification.phone && (
                           <Button
                             size="sm"
                             variant="default"
