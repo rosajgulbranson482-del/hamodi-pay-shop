@@ -108,6 +108,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          disabled={item.stockCount !== null && item.stockCount !== undefined && item.quantity >= item.stockCount}
                         >
                           <Plus className="w-3 h-3" />
                         </Button>
@@ -121,6 +122,9 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
+                    {item.stockCount !== null && item.stockCount !== undefined && item.quantity >= item.stockCount && (
+                      <p className="text-xs text-destructive mt-1">الحد الأقصى المتاح: {item.stockCount}</p>
+                    )}
                   </div>
                 </div>
               ))}

@@ -8,6 +8,7 @@ export interface CartItem {
   price: number;
   image: string;
   quantity: number;
+  stockCount?: number | null;
 }
 
 interface CartContextType {
@@ -66,7 +67,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id,
             name,
             price,
-            image
+            image,
+            stock_count
           )
         `)
         .eq('user_id', user.id);
@@ -83,6 +85,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             price: item.products.price,
             image: item.products.image || '',
             quantity: item.quantity,
+            stockCount: item.products.stock_count,
           }));
 
         // Get current local items
@@ -187,23 +190,29 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addToCart = useCallback((product: { id: string; name: string; price: number; image: string }) => {
+  const addToCart = useCallback((product: { id: string; name: string; price: number; image: string; stockCount?: number | null }) => {
     setItems(prev => {
       const existing = prev.find(item => item.id === product.id);
       let newItems: CartItem[];
       
       if (existing) {
+        // Check stock before increasing quantity
+        const newQuantity = existing.quantity + 1;
+        if (product.stockCount !== null && product.stockCount !== undefined && newQuantity > product.stockCount) {
+          return prev; // Don't exceed stock
+        }
+        
         newItems = prev.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: newQuantity, stockCount: product.stockCount }
             : item
         );
         // Save to database
         if (user) {
-          saveItemToDatabase(product.id, existing.quantity + 1);
+          saveItemToDatabase(product.id, newQuantity);
         }
       } else {
-        newItems = [...prev, { ...product, quantity: 1 }];
+        newItems = [...prev, { ...product, quantity: 1, stockCount: product.stockCount }];
         // Save to database
         if (user) {
           saveItemToDatabase(product.id, 1);
@@ -226,14 +235,27 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       removeFromCart(productId);
       return;
     }
-    setItems(prev =>
-      prev.map(item =>
-        item.id === productId ? { ...item, quantity } : item
-      )
-    );
-    if (user) {
-      saveItemToDatabase(productId, quantity);
-    }
+    
+    setItems(prev => {
+      const item = prev.find(i => i.id === productId);
+      // Check stock before increasing quantity
+      if (item && item.stockCount !== null && item.stockCount !== undefined && quantity > item.stockCount) {
+        return prev; // Don't exceed stock
+      }
+      
+      return prev.map(i =>
+        i.id === productId ? { ...i, quantity } : i
+      );
+    });
+    
+    // Only save if within stock limits
+    setItems(prev => {
+      const item = prev.find(i => i.id === productId);
+      if (item && user) {
+        saveItemToDatabase(productId, item.quantity);
+      }
+      return prev;
+    });
   }, [user, removeFromCart]);
 
   const clearCart = useCallback(() => {
