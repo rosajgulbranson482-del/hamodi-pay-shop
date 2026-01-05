@@ -2,7 +2,7 @@ import React from 'react';
 import { MessageCircle } from 'lucide-react';
 
 const FloatingWhatsApp: React.FC = () => {
-  const phoneNumber = '201028576835';
+  const phoneNumber = '201025529130';
   const message = 'مرحباً، أريد الاستفسار عن منتجاتكم';
   
   const handleClick = () => {
