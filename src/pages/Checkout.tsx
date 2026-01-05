@@ -15,7 +15,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { CartProvider } from '@/context/CartContext';
 import CouponSuggestion from '@/components/CouponSuggestion';
 
-
 interface AppliedCoupon {
   code: string;
   discount_type: 'percentage' | 'fixed';
@@ -23,30 +22,16 @@ interface AppliedCoupon {
   discount_amount: number;
 }
 
+interface Center {
+  id: string;
+  name: string;
+  delivery_fee: number;
+  delivery_days: string;
+  is_active: boolean;
+}
+
 const PAYMENT_NUMBER = "01025529130";
 const WHATSAPP_NUMBER = "201025529130";
-
-// مراكز محافظة الشرقية
-const SHARQIA_CENTERS = [
-  'الزقازيق',
-  'بلبيس',
-  'منيا القمح',
-  'أبو حماد',
-  'أبو كبير',
-  'فاقوس',
-  'الحسينية',
-  'ههيا',
-  'كفر صقر',
-  'أولاد صقر',
-  'الإبراهيمية',
-  'ديرب نجم',
-  'القرين',
-  'مشتول السوق',
-  'القنايات',
-  'أبو حماد',
-  'العاشر من رمضان',
-  'صان الحجر',
-];
 
 type PaymentMethod = 'cash_on_delivery' | 'vodafone_cash' | '';
 
@@ -100,6 +85,8 @@ const CheckoutContent: React.FC = () => {
   // Delivery settings state
   const [deliveryFee, setDeliveryFee] = useState(50);
   const [deliveryDays, setDeliveryDays] = useState('1-3 أيام');
+  const [centers, setCenters] = useState<Center[]>([]);
+  const [loadingCenters, setLoadingCenters] = useState(true);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -108,29 +95,38 @@ const CheckoutContent: React.FC = () => {
     }
   }, [items.length, navigate]);
 
-  // Fetch delivery settings
+  // Fetch centers from database
   useEffect(() => {
-    const fetchDeliverySettings = async () => {
+    const fetchCenters = async () => {
       try {
         const { data, error } = await supabase
-          .from('delivery_settings')
+          .from('sharqia_centers')
           .select('*')
-          .limit(1)
-          .maybeSingle();
+          .eq('is_active', true)
+          .order('name');
 
         if (error) throw error;
-
-        if (data) {
-          setDeliveryFee(Number(data.delivery_fee));
-          setDeliveryDays(data.delivery_days);
-        }
+        setCenters(data || []);
       } catch (err) {
-        console.error('Error fetching delivery settings:', err);
+        console.error('Error fetching centers:', err);
+      } finally {
+        setLoadingCenters(false);
       }
     };
 
-    fetchDeliverySettings();
+    fetchCenters();
   }, []);
+
+  // Update delivery fee when center changes
+  useEffect(() => {
+    if (formData.center) {
+      const selectedCenter = centers.find(c => c.name === formData.center);
+      if (selectedCenter) {
+        setDeliveryFee(selectedCenter.delivery_fee);
+        setDeliveryDays(selectedCenter.delivery_days);
+      }
+    }
+  }, [formData.center, centers]);
 
 
   // Show welcome message when returning after login
@@ -506,14 +502,15 @@ ${orderItemsText}
                     <Select
                       value={formData.center}
                       onValueChange={(value) => handleInputChange('center', value)}
+                      disabled={loadingCenters}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="اختر المركز" />
+                        <SelectValue placeholder={loadingCenters ? "جاري التحميل..." : "اختر المركز"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {SHARQIA_CENTERS.map((center) => (
-                          <SelectItem key={center} value={center}>
-                            {center}
+                        {centers.map((center) => (
+                          <SelectItem key={center.id} value={center.name}>
+                            {center.name} ({center.delivery_fee} ج.م)
                           </SelectItem>
                         ))}
                       </SelectContent>

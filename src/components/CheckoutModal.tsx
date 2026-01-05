@@ -13,26 +13,13 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import CouponSuggestion from '@/components/CouponSuggestion';
 
-// مراكز محافظة الشرقية
-const SHARQIA_CENTERS = [
-  'الزقازيق',
-  'بلبيس',
-  'منيا القمح',
-  'أبو حماد',
-  'أبو كبير',
-  'فاقوس',
-  'الحسينية',
-  'ههيا',
-  'كفر صقر',
-  'أولاد صقر',
-  'الإبراهيمية',
-  'ديرب نجم',
-  'القرين',
-  'مشتول السوق',
-  'القنايات',
-  'العاشر من رمضان',
-  'صان الحجر',
-];
+interface Center {
+  id: string;
+  name: string;
+  delivery_fee: number;
+  delivery_days: string;
+  is_active: boolean;
+}
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -97,32 +84,43 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   // Delivery settings state
   const [deliveryFee, setDeliveryFee] = useState(50);
   const [deliveryDays, setDeliveryDays] = useState('1-3 أيام');
+  const [centers, setCenters] = useState<Center[]>([]);
+  const [loadingCenters, setLoadingCenters] = useState(true);
 
-  // Fetch delivery settings from database
+  // Fetch centers from database
   useEffect(() => {
-    const fetchDeliverySettings = async () => {
+    const fetchCenters = async () => {
       try {
         const { data, error } = await supabase
-          .from('delivery_settings')
+          .from('sharqia_centers')
           .select('*')
-          .limit(1)
-          .maybeSingle();
+          .eq('is_active', true)
+          .order('name');
 
         if (error) throw error;
-
-        if (data) {
-          setDeliveryFee(Number(data.delivery_fee));
-          setDeliveryDays(data.delivery_days);
-        }
+        setCenters(data || []);
       } catch (err) {
-        console.error('Error fetching delivery settings:', err);
+        console.error('Error fetching centers:', err);
+      } finally {
+        setLoadingCenters(false);
       }
     };
     
     if (isOpen) {
-      fetchDeliverySettings();
+      fetchCenters();
     }
   }, [isOpen]);
+
+  // Update delivery fee when center changes
+  useEffect(() => {
+    if (formData.center) {
+      const selectedCenter = centers.find(c => c.name === formData.center);
+      if (selectedCenter) {
+        setDeliveryFee(selectedCenter.delivery_fee);
+        setDeliveryDays(selectedCenter.delivery_days);
+      }
+    }
+  }, [formData.center, centers]);
 
   // Pre-fill form with profile data when authenticated
   useEffect(() => {
@@ -461,14 +459,15 @@ ${orderItemsText}
                 <Select
                   value={formData.center}
                   onValueChange={(value) => handleInputChange('center', value)}
+                  disabled={loadingCenters}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر المركز" />
+                    <SelectValue placeholder={loadingCenters ? "جاري التحميل..." : "اختر المركز"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {SHARQIA_CENTERS.map((center) => (
-                      <SelectItem key={center} value={center}>
-                        {center}
+                    {centers.map((center) => (
+                      <SelectItem key={center.id} value={center.name}>
+                        {center.name} ({center.delivery_fee} ج.م)
                       </SelectItem>
                     ))}
                   </SelectContent>
