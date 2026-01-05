@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Truck, Shield, CreditCard } from 'lucide-react';
+import PromoBanner from '@/components/PromoBanner';
 
 const Hero: React.FC = () => {
   return (
@@ -23,6 +24,11 @@ const Hero: React.FC = () => {
             <br />
             <span className="text-gradient">حمودي ستور</span>
           </h1>
+
+          {/* Promo Banner */}
+          <div className="mb-4 md:mb-6 animate-slide-up rounded-xl overflow-hidden" style={{ animationDelay: '0.05s' }}>
+            <PromoBanner />
+          </div>
 
           <p className="text-sm md:text-xl text-primary-foreground/80 mb-6 md:mb-8 max-w-2xl mx-auto px-2 animate-slide-up" style={{ animationDelay: '0.1s' }}>
             اكتشف أحدث المنتجات الإلكترونية بأفضل الأسعار مع توصيل لجميع محافظات مصر
