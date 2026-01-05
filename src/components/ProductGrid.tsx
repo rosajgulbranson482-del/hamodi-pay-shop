@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import ProductCard from './ProductCard';
 import CategoryNav from './CategoryNav';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,9 +15,28 @@ interface Product {
   category: string;
   in_stock: boolean | null;
   badge: string | null;
+  stock_count?: number | null;
 }
 
 const PRODUCTS_PER_PAGE = 12;
+
+const ProductGridSkeleton = memo(() => (
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+    {[...Array(8)].map((_, i) => (
+      <div key={i} className="bg-card rounded-xl md:rounded-2xl overflow-hidden">
+        <Skeleton className="aspect-square w-full" />
+        <div className="p-3 md:p-4 space-y-2">
+          <Skeleton className="h-3 md:h-4 w-16 md:w-20" />
+          <Skeleton className="h-4 md:h-6 w-full" />
+          <Skeleton className="h-3 md:h-4 w-3/4" />
+          <Skeleton className="h-6 md:h-8 w-20 md:w-24" />
+        </div>
+      </div>
+    ))}
+  </div>
+));
+
+ProductGridSkeleton.displayName = 'ProductGridSkeleton';
 
 const ProductGrid: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('الكل');
@@ -28,8 +47,15 @@ const ProductGrid: React.FC = () => {
   const [page, setPage] = useState(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchProducts = useCallback(async (pageNum: number, category: string, reset = false) => {
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     if (reset) {
       setLoading(true);
     } else {
@@ -41,7 +67,7 @@ const ProductGrid: React.FC = () => {
 
     let query = supabase
       .from('products')
-      .select('*')
+      .select('id, name, description, price, original_price, image, category, in_stock, badge, stock_count')
       .order('created_at', { ascending: false })
       .range(from, to);
 
@@ -70,6 +96,12 @@ const ProductGrid: React.FC = () => {
     setProducts([]);
     setHasMore(true);
     fetchProducts(0, selectedCategory, true);
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [selectedCategory, fetchProducts]);
 
   // Intersection Observer for infinite scroll
@@ -86,7 +118,7 @@ const ProductGrid: React.FC = () => {
           });
         }
       },
-      { threshold: 0.1, rootMargin: '100px' }
+      { threshold: 0.1, rootMargin: '200px' }
     );
 
     if (loadMoreRef.current) {
@@ -120,33 +152,14 @@ const ProductGrid: React.FC = () => {
           </div>
 
           {/* Loading State */}
-          {loading && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-card rounded-xl md:rounded-2xl overflow-hidden">
-                  <Skeleton className="aspect-square w-full" />
-                  <div className="p-3 md:p-4 space-y-2">
-                    <Skeleton className="h-3 md:h-4 w-16 md:w-20" />
-                    <Skeleton className="h-4 md:h-6 w-full" />
-                    <Skeleton className="h-3 md:h-4 w-3/4" />
-                    <Skeleton className="h-6 md:h-8 w-20 md:w-24" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {loading && <ProductGridSkeleton />}
 
           {/* Products Grid */}
           {!loading && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-                {products.map((product, index) => (
-                  <div
-                    key={product.id}
-                    style={{ animationDelay: `${Math.min(index, 11) * 0.05}s` }}
-                  >
-                    <ProductCard product={product} />
-                  </div>
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
 

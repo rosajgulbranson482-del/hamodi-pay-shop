@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { 
+import {
   Headphones, 
   Watch, 
   BatteryCharging, 
@@ -27,8 +27,8 @@ const categories = [
   { id: "جيمنج", label: "جيمنج", icon: Gamepad2 },
 ];
 
-const CategoryNav: React.FC<CategoryNavProps> = ({ selectedCategory, onSelectCategory }) => {
-  const scrollToProducts = (category: string) => {
+const CategoryNav: React.FC<CategoryNavProps> = memo(({ selectedCategory, onSelectCategory }) => {
+  const scrollToProducts = useCallback((category: string) => {
     onSelectCategory(category);
     const productsSection = document.getElementById('products');
     if (productsSection) {
@@ -41,7 +41,7 @@ const CategoryNav: React.FC<CategoryNavProps> = ({ selectedCategory, onSelectCat
         behavior: 'smooth'
       });
     }
-  };
+  }, [onSelectCategory]);
 
   return (
     <div className="sticky top-16 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
@@ -71,6 +71,8 @@ const CategoryNav: React.FC<CategoryNavProps> = ({ selectedCategory, onSelectCat
       </div>
     </div>
   );
-};
+});
+
+CategoryNav.displayName = 'CategoryNav';
 
 export default CategoryNav;
