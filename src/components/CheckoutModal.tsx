@@ -88,8 +88,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     verificationCode: '',
     paymentMethod: '' as PaymentMethod,
   });
-  const [sentCode, setSentCode] = useState('');
-  const [isVerified, setIsVerified] = useState(false);
   
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
@@ -135,10 +133,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         phone: profile.phone || prev.phone,
         address: profile.default_address || prev.address,
       }));
-      // Auto-verify phone for authenticated users
-      if (profile.phone) {
-        setIsVerified(true);
-      }
     }
   }, [isAuthenticated, profile]);
 
@@ -207,40 +201,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     setCouponCode('');
   };
 
-  const sendVerificationCode = () => {
-    if (!formData.phone || formData.phone.length !== 11) {
-      toast({
-        title: "خطأ",
-        description: "يرجى إدخال رقم هاتف صحيح مكون من 11 رقم",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    setSentCode(code);
-    
-    toast({
-      title: "تم إرسال الكود",
-      description: `كود التحقق هو: ${code} (في التطبيق الحقيقي سيتم إرساله SMS)`,
-    });
-  };
-
-  const verifyCode = () => {
-    if (formData.verificationCode === sentCode) {
-      setIsVerified(true);
-      toast({
-        title: "تم التحقق",
-        description: "تم التحقق من رقم الهاتف بنجاح",
-      });
-    } else {
-      toast({
-        title: "كود خاطئ",
-        description: "يرجى إدخال الكود الصحيح",
-        variant: "destructive",
-      });
-    }
-  };
 
   const copyPaymentNumber = () => {
     navigator.clipboard.writeText(PAYMENT_NUMBER);
@@ -273,14 +233,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    if (!isVerified) {
-      toast({
-        title: "خطأ",
-        description: "يرجى التحقق من رقم الهاتف أولاً",
-        variant: "destructive",
-      });
-      return;
-    }
 
     if (!formData.paymentMethod) {
       toast({
@@ -393,8 +345,6 @@ ${orderItemsText}
         verificationCode: '',
         paymentMethod: '',
       });
-      setIsVerified(false);
-      setSentCode('');
       setAppliedCoupon(null);
       setCouponCode('');
     } catch (err) {
@@ -450,36 +400,12 @@ ${orderItemsText}
                   <Phone className="w-4 h-4 text-primary" />
                   رقم الهاتف
                 </Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="01xxxxxxxxx"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    maxLength={11}
-                    className="flex-1"
-                    disabled={isVerified}
-                  />
-                  <Button
-                    variant={isVerified ? "success" : "secondary"}
-                    onClick={sendVerificationCode}
-                    disabled={isVerified}
-                  >
-                    {isVerified ? <Check className="w-4 h-4" /> : 'إرسال كود'}
-                  </Button>
-                </div>
-                
-                {sentCode && !isVerified && (
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      placeholder="أدخل كود التحقق"
-                      value={formData.verificationCode}
-                      onChange={(e) => handleInputChange('verificationCode', e.target.value)}
-                      maxLength={4}
-                      className="flex-1"
-                    />
-                    <Button onClick={verifyCode}>تحقق</Button>
-                  </div>
-                )}
+                <Input
+                  placeholder="01xxxxxxxxx"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  maxLength={11}
+                />
               </div>
 
               {/* Email (Optional) */}
