@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, memo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronLeft, ChevronRight, Flame, Percent } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useQuery } from '@tanstack/react-query';
 
 interface Product {
   id: string;
@@ -18,30 +20,111 @@ interface Product {
   in_stock?: boolean | null;
 }
 
+const OfferCard = memo(({ product, isInCart, onAddToCart }: { 
+  product: Product; 
+  isInCart: boolean;
+  onAddToCart: (e: React.MouseEvent, product: Product) => void;
+}) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const discount = product.original_price
+    ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+    : 0;
+
+  return (
+    <Link
+      to={`/product/${product.id}`}
+      className="flex-shrink-0 w-[160px] md:w-[220px] group"
+    >
+      <div className="bg-card rounded-xl md:rounded-2xl overflow-hidden border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+        {/* Image */}
+        <div className="relative aspect-square overflow-hidden bg-muted">
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-muted animate-pulse" />
+          )}
+          <img
+            src={product.image || '/placeholder.svg'}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            onLoad={() => setImageLoaded(true)}
+            className={cn(
+              "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300",
+              imageLoaded ? "opacity-100" : "opacity-0"
+            )}
+          />
+          
+          {/* Discount Badge */}
+          {discount > 0 && (
+            <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 gradient-secondary rounded-full">
+              <Percent className="w-3 h-3 text-secondary-foreground" />
+              <span className="text-xs font-bold text-secondary-foreground">
+                {discount}%
+              </span>
+            </div>
+          )}
+
+          {product.badge && (
+            <div className="absolute top-2 left-2 px-2 py-1 gradient-primary rounded-full">
+              <span className="text-[10px] md:text-xs font-bold text-primary-foreground">
+                {product.badge}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="p-2.5 md:p-3">
+          <h3 className="text-xs md:text-sm font-semibold text-foreground line-clamp-2 mb-2 min-h-[2.5rem] md:min-h-[2.75rem]">
+            {product.name}
+          </h3>
+          
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="text-sm md:text-base font-bold text-primary">
+              {product.price} ج.م
+            </span>
+            {product.original_price && (
+              <span className="text-[10px] md:text-xs text-muted-foreground line-through">
+                {product.original_price}
+              </span>
+            )}
+          </div>
+
+          <Button
+            size="sm"
+            variant={isInCart ? "success" : "default"}
+            className="w-full text-xs md:text-sm h-8 md:h-9"
+            onClick={(e) => onAddToCart(e, product)}
+          >
+            {isInCart ? "في السلة ✓" : "أضف للسلة"}
+          </Button>
+        </div>
+      </div>
+    </Link>
+  );
+});
+
+OfferCard.displayName = 'OfferCard';
+
 const SpecialOffers: React.FC = () => {
-  const [offers, setOffers] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { addToCart, items } = useCart();
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchOffers();
-  }, []);
+  const { data: offers = [], isLoading } = useQuery({
+    queryKey: ['special-offers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, price, original_price, image, badge, stock_count, in_stock')
+        .not('original_price', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-  const fetchOffers = async () => {
-    const { data, error } = await supabase
-      .from('products')
-      .select('id, name, price, original_price, image, badge, stock_count, in_stock')
-      .not('original_price', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (!error && data) {
-      setOffers(data);
-    }
-    setLoading(false);
-  };
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -69,7 +152,35 @@ const SpecialOffers: React.FC = () => {
     });
   };
 
-  if (loading || offers.length === 0) return null;
+  if (isLoading) {
+    return (
+      <section className="py-6 md:py-10 bg-gradient-to-l from-destructive/5 via-secondary/10 to-primary/5">
+        <div className="container mx-auto px-3 md:px-4">
+          <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+            <Skeleton className="w-10 h-10 rounded-xl" />
+            <div>
+              <Skeleton className="h-6 w-24 mb-1" />
+              <Skeleton className="h-4 w-40" />
+            </div>
+          </div>
+          <div className="flex gap-3 md:gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-[160px] md:w-[220px]">
+                <Skeleton className="aspect-square rounded-xl" />
+                <div className="p-2.5 space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (offers.length === 0) return null;
 
   return (
     <section className="py-6 md:py-10 bg-gradient-to-l from-destructive/5 via-secondary/10 to-primary/5">
@@ -112,76 +223,14 @@ const SpecialOffers: React.FC = () => {
           ref={scrollRef}
           className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-3 px-3 md:mx-0 md:px-0"
         >
-          {offers.map((product) => {
-            const discount = product.original_price
-              ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
-              : 0;
-            const isInCart = items.some(item => item.id === product.id);
-
-            return (
-              <Link
-                key={product.id}
-                to={`/product/${product.id}`}
-                className="flex-shrink-0 w-[160px] md:w-[220px] group"
-              >
-                <div className="bg-card rounded-xl md:rounded-2xl overflow-hidden border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300">
-                  {/* Image */}
-                  <div className="relative aspect-square overflow-hidden bg-muted">
-                    <img
-                      src={product.image || '/placeholder.svg'}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    
-                    {/* Discount Badge */}
-                    {discount > 0 && (
-                      <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 gradient-secondary rounded-full">
-                        <Percent className="w-3 h-3 text-secondary-foreground" />
-                        <span className="text-xs font-bold text-secondary-foreground">
-                          {discount}%
-                        </span>
-                      </div>
-                    )}
-
-                    {product.badge && (
-                      <div className="absolute top-2 left-2 px-2 py-1 gradient-primary rounded-full">
-                        <span className="text-[10px] md:text-xs font-bold text-primary-foreground">
-                          {product.badge}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-2.5 md:p-3">
-                    <h3 className="text-xs md:text-sm font-semibold text-foreground line-clamp-2 mb-2 min-h-[2.5rem] md:min-h-[2.75rem]">
-                      {product.name}
-                    </h3>
-                    
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span className="text-sm md:text-base font-bold text-primary">
-                        {product.price} ج.م
-                      </span>
-                      {product.original_price && (
-                        <span className="text-[10px] md:text-xs text-muted-foreground line-through">
-                          {product.original_price}
-                        </span>
-                      )}
-                    </div>
-
-                    <Button
-                      size="sm"
-                      variant={isInCart ? "success" : "default"}
-                      className="w-full text-xs md:text-sm h-8 md:h-9"
-                      onClick={(e) => handleAddToCart(e, product)}
-                    >
-                      {isInCart ? "في السلة ✓" : "أضف للسلة"}
-                    </Button>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+          {offers.map((product) => (
+            <OfferCard
+              key={product.id}
+              product={product}
+              isInCart={items.some(item => item.id === product.id)}
+              onAddToCart={handleAddToCart}
+            />
+          ))}
         </div>
       </div>
     </section>

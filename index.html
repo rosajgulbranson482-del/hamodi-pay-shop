@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
+    <!-- DNS Prefetch & Preconnect for faster loading -->
+    <link rel="dns-prefetch" href="https://jgybqgblhlmnbstlpape.supabase.co" />
+    <link rel="preconnect" href="https://jgybqgblhlmnbstlpape.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
     <!-- Primary Meta Tags -->
     <title>حمودي ستور | أفضل المنتجات الإلكترونية في مصر</title>
     <meta name="title" content="حمودي ستور | أفضل المنتجات الإلكترونية في مصر" />
@@ -92,7 +100,8 @@
       }]
     }
     </script>
-    <!-- Google Analytics -->
+    
+    <!-- Google Analytics - Loaded async for performance -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -100,10 +109,35 @@
       gtag('js', new Date());
       gtag('config', 'G-XXXXXXXXXX');
     </script>
+    
+    <!-- Critical CSS for faster First Paint -->
+    <style>
+      body { margin: 0; font-family: 'Cairo', sans-serif; }
+      #root { min-height: 100vh; }
+      .loading-spinner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #7c3aed;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Initial loading indicator -->
+      <div class="loading-spinner"></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
