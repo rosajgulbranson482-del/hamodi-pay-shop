@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
+import FloatingWhatsApp from '@/components/FloatingWhatsApp';
 import SpecialOffers from '@/components/SpecialOffers';
 import ProductGrid from '@/components/ProductGrid';
 import CartDrawer from '@/components/CartDrawer';
@@ -41,7 +42,7 @@ const IndexContent: React.FC = () => {
         </main>
 
         <Footer />
-
+        <FloatingWhatsApp />
         <CartDrawer
           isOpen={isCartOpen}
           onClose={() => setIsCartOpen(false)}
