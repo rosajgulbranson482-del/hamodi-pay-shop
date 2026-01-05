@@ -197,21 +197,41 @@ serve(async (req) => {
       .filter(item => item.product_id)
       .map(item => ({
         product_id: item.product_id,
-        quantity: item.quantity
+        quantity: item.quantity,
       }));
 
     if (productUpdates.length > 0) {
+      // IMPORTANT: pass JSON as an array/object, not a JSON string.
       const { error: stockError } = await supabase.rpc('batch_update_stock', {
-        product_updates: JSON.stringify(productUpdates)
+        product_updates: productUpdates,
       });
 
       if (stockError) {
-        console.error('Error updating stock (non-critical):', stockError);
-        await logToBackend(supabase, 'create-order', 'warning', 'Error updating stock (non-critical)', 
-          { error: stockError.message, order_number: orderNumber }, undefined, undefined, clientIP, userAgent);
-      } else {
-        console.log(`Stock updated for ${productUpdates.length} products`);
+        const duration = Date.now() - startTime;
+        console.error('Error updating stock (critical):', stockError);
+        await logToBackend(
+          supabase,
+          'create-order',
+          'error',
+          'Error updating stock (critical) - rollback',
+          { error: stockError.message, order_id: order.id, order_number: orderNumber },
+          duration,
+          500,
+          clientIP,
+          userAgent
+        );
+
+        // Rollback order + items so we never confirm an order بدون حجز المخزون
+        await supabase.from('order_items').delete().eq('order_id', order.id);
+        await supabase.from('orders').delete().eq('id', order.id);
+
+        return new Response(
+          JSON.stringify({ error: 'حدث خطأ أثناء تحديث المخزون، يرجى المحاولة مرة أخرى' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
+
+      console.log(`Stock updated for ${productUpdates.length} products`);
     }
 
     // === COUPON UPDATE PHASE ===
@@ -281,9 +301,9 @@ function validateOrderRequest(body: CreateOrderRequest): string | null {
 function validateStock(items: OrderItem[], products: any[]): string | null {
   for (const item of items) {
     if (!item.product_id) continue;
-    
+
     const product = products.find(p => p.id === item.product_id);
-    
+
     if (!product) {
       return `المنتج "${item.product_name}" غير موجود`;
     }
@@ -292,11 +312,14 @@ function validateStock(items: OrderItem[], products: any[]): string | null {
       return `المنتج "${item.product_name}" غير متوفر حالياً`;
     }
 
-    if (product.stock_count !== null && product.stock_count < item.quantity) {
-      if (product.stock_count === 0) {
+    // Treat NULL stock as 0 (prevents selling without a defined stock)
+    const available = Number(product.stock_count ?? 0);
+
+    if (available < item.quantity) {
+      if (available === 0) {
         return `المنتج "${item.product_name}" نفذ من المخزون`;
       }
-      return `الكمية المطلوبة من "${item.product_name}" غير متوفرة. المتاح: ${product.stock_count} قطعة فقط`;
+      return `الكمية المطلوبة من "${item.product_name}" غير متوفرة. المتاح: ${available} قطعة فقط`;
     }
   }
   return null;
