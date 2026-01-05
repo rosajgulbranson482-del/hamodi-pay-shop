@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import CouponSuggestion from '@/components/CouponSuggestion';
 
 // مراكز محافظة الشرقية
 const SHARQIA_CENTERS = [
@@ -148,10 +149,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) {
+  const applyCoupon = async (codeToApply?: string) => {
+    const code = codeToApply || couponCode;
+    if (!code.trim()) {
       toast({ title: "خطأ", description: "يرجى إدخال كود الكوبون", variant: "destructive" });
       return;
+    }
+
+    if (codeToApply) {
+      setCouponCode(codeToApply);
     }
 
     setApplyingCoupon(true);
@@ -160,7 +166,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       // Use edge function to validate coupon securely
       const { data, error } = await supabase.functions.invoke('validate-coupon', {
         body: {
-          code: couponCode,
+          code: code,
           orderTotal: totalPrice,
         }
       });
@@ -589,6 +595,14 @@ ${orderItemsText}
                 </div>
               </div>
 
+              {/* Coupon Suggestion */}
+              {!appliedCoupon && (
+                <CouponSuggestion 
+                  onApply={(code) => applyCoupon(code)} 
+                  appliedCouponCode={appliedCoupon?.code}
+                />
+              )}
+
               {/* Coupon Code */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
@@ -620,7 +634,7 @@ ${orderItemsText}
                     />
                     <Button 
                       variant="secondary" 
-                      onClick={applyCoupon}
+                      onClick={() => applyCoupon()}
                       disabled={applyingCoupon}
                     >
                       {applyingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تطبيق'}
