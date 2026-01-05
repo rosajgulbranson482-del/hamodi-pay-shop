@@ -7,6 +7,7 @@ import ProductGrid from '@/components/ProductGrid';
 import CartDrawer from '@/components/CartDrawer';
 import CheckoutModal from '@/components/CheckoutModal';
 import Footer from '@/components/Footer';
+import PromoBanner from '@/components/PromoBanner';
 import { CartProvider } from '@/context/CartContext';
 
 const IndexContent: React.FC = () => {
@@ -31,6 +32,7 @@ const IndexContent: React.FC = () => {
       </Helmet>
 
       <div className="min-h-screen flex flex-col">
+        <PromoBanner />
         <Header onCartClick={() => setIsCartOpen(true)} />
         
         <main className="flex-1">
