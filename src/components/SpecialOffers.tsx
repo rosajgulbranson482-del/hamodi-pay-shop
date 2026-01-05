@@ -14,6 +14,8 @@ interface Product {
   original_price: number | null;
   image: string | null;
   badge: string | null;
+  stock_count?: number | null;
+  in_stock?: boolean | null;
 }
 
 const SpecialOffers: React.FC = () => {
@@ -30,7 +32,7 @@ const SpecialOffers: React.FC = () => {
   const fetchOffers = async () => {
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, price, original_price, image, badge')
+      .select('id, name, price, original_price, image, badge, stock_count, in_stock')
       .not('original_price', 'is', null)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -59,6 +61,7 @@ const SpecialOffers: React.FC = () => {
       name: product.name,
       price: product.price,
       image: product.image || '',
+      stockCount: product.stock_count,
     });
     toast({
       title: "تمت الإضافة للسلة",
