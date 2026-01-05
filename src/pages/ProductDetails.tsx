@@ -26,6 +26,7 @@ import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
 import CartDrawer from '@/components/CartDrawer';
 import NotifyWhenAvailable from '@/components/NotifyWhenAvailable';
+import PromoBanner from '@/components/PromoBanner';
 
 interface ProductImage {
   id: string;
@@ -221,6 +222,7 @@ const ProductDetailsContent = () => {
         <meta name="description" content={product.description || `اشتر ${product.name} بأفضل سعر`} />
       </Helmet>
       
+      <PromoBanner />
       <Header onCartClick={handleOpenCart} />
       
       <main className="container mx-auto px-4 py-8">
