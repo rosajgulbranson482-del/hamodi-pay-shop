@@ -457,6 +457,36 @@ export type Database = {
           },
         ]
       }
+      sharqia_centers: {
+        Row: {
+          created_at: string
+          delivery_days: string
+          delivery_fee: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_days?: string
+          delivery_fee?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_days?: string
+          delivery_fee?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stock_notifications: {
         Row: {
           created_at: string

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -31,164 +32,198 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, MapPin, Truck, Save, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-// مراكز محافظة الشرقية - يتم تخزينها محلياً
-const DEFAULT_CENTERS = [
-  'الزقازيق',
-  'بلبيس',
-  'منيا القمح',
-  'أبو حماد',
-  'أبو كبير',
-  'فاقوس',
-  'الحسينية',
-  'ههيا',
-  'كفر صقر',
-  'أولاد صقر',
-  'الإبراهيمية',
-  'ديرب نجم',
-  'القرين',
-  'مشتول السوق',
-  'القنايات',
-  'العاشر من رمضان',
-  'صان الحجر',
-];
+interface Center {
+  id: string;
+  name: string;
+  delivery_fee: number;
+  delivery_days: string;
+  is_active: boolean;
+}
 
 const AdminCenters: React.FC = () => {
   const { toast } = useToast();
-  const [centers, setCenters] = useState<string[]>(DEFAULT_CENTERS);
+  const [centers, setCenters] = useState<Center[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingCenter, setEditingCenter] = useState<string | null>(null);
-  const [newCenterName, setNewCenterName] = useState('');
+  const [editingCenter, setEditingCenter] = useState<Center | null>(null);
   
-  // Delivery settings state
-  const [deliveryFee, setDeliveryFee] = useState(50);
-  const [deliveryDays, setDeliveryDays] = useState('1-3 أيام');
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [loadingSettings, setLoadingSettings] = useState(true);
-  const [isEditingSettings, setIsEditingSettings] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    delivery_fee: 50,
+    delivery_days: '1-3 أيام',
+    is_active: true,
+  });
 
-  // Fetch delivery settings from database
+  const fetchCenters = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sharqia_centers')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCenters(data || []);
+    } catch (err) {
+      console.error('Error fetching centers:', err);
+      toast({ title: 'خطأ', description: 'حدث خطأ في تحميل المراكز', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchDeliverySettings = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('delivery_settings')
-          .select('*')
-          .limit(1)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        if (data) {
-          setDeliveryFee(Number(data.delivery_fee));
-          setDeliveryDays(data.delivery_days);
-        }
-      } catch (err) {
-        console.error('Error fetching delivery settings:', err);
-      } finally {
-        setLoadingSettings(false);
-      }
-    };
-
-    fetchDeliverySettings();
+    fetchCenters();
   }, []);
 
-  const handleSaveDeliverySettings = async () => {
-    setSavingSettings(true);
-    
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      delivery_fee: 50,
+      delivery_days: '1-3 أيام',
+      is_active: true,
+    });
+  };
+
+  const handleAddCenter = async () => {
+    if (!formData.name.trim()) {
+      toast({ title: 'خطأ', description: 'يرجى إدخال اسم المركز', variant: 'destructive' });
+      return;
+    }
+
+    setSaving(true);
     try {
-      // First check if settings exist
-      const { data: existing } = await supabase
-        .from('delivery_settings')
-        .select('id')
-        .limit(1)
-        .maybeSingle();
+      const { error } = await supabase
+        .from('sharqia_centers')
+        .insert({
+          name: formData.name.trim(),
+          delivery_fee: formData.delivery_fee,
+          delivery_days: formData.delivery_days,
+          is_active: formData.is_active,
+        });
 
-      if (existing) {
-        // Update existing settings
-        const { error } = await supabase
-          .from('delivery_settings')
-          .update({
-            delivery_fee: deliveryFee,
-            delivery_days: deliveryDays,
-          })
-          .eq('id', existing.id);
-
-        if (error) throw error;
-      } else {
-        // Insert new settings
-        const { error } = await supabase
-          .from('delivery_settings')
-          .insert({
-            delivery_fee: deliveryFee,
-            delivery_days: deliveryDays,
-          });
-
-        if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          toast({ title: 'خطأ', description: 'هذا المركز موجود بالفعل', variant: 'destructive' });
+        } else {
+          throw error;
+        }
+        return;
       }
 
-      toast({ title: 'تم الحفظ', description: 'تم تحديث إعدادات الشحن بنجاح' });
-      setIsEditingSettings(false);
+      toast({ title: 'تم بنجاح', description: 'تمت إضافة المركز' });
+      resetForm();
+      setIsAddDialogOpen(false);
+      fetchCenters();
     } catch (err) {
-      console.error('Error saving delivery settings:', err);
-      toast({ 
-        title: 'خطأ', 
-        description: 'حدث خطأ أثناء حفظ الإعدادات', 
-        variant: 'destructive' 
-      });
+      console.error('Error adding center:', err);
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء إضافة المركز', variant: 'destructive' });
     } finally {
-      setSavingSettings(false);
+      setSaving(false);
     }
   };
 
-  const handleAddCenter = () => {
-    if (!newCenterName.trim()) {
+  const handleEditCenter = async () => {
+    if (!formData.name.trim() || !editingCenter) {
       toast({ title: 'خطأ', description: 'يرجى إدخال اسم المركز', variant: 'destructive' });
       return;
     }
 
-    if (centers.includes(newCenterName.trim())) {
-      toast({ title: 'خطأ', description: 'هذا المركز موجود بالفعل', variant: 'destructive' });
-      return;
-    }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('sharqia_centers')
+        .update({
+          name: formData.name.trim(),
+          delivery_fee: formData.delivery_fee,
+          delivery_days: formData.delivery_days,
+          is_active: formData.is_active,
+        })
+        .eq('id', editingCenter.id);
 
-    setCenters([...centers, newCenterName.trim()]);
-    toast({ title: 'تم بنجاح', description: 'تمت إضافة المركز' });
-    setNewCenterName('');
-    setIsAddDialogOpen(false);
+      if (error) {
+        if (error.code === '23505') {
+          toast({ title: 'خطأ', description: 'هذا المركز موجود بالفعل', variant: 'destructive' });
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      toast({ title: 'تم بنجاح', description: 'تم تحديث المركز' });
+      resetForm();
+      setEditingCenter(null);
+      setIsEditDialogOpen(false);
+      fetchCenters();
+    } catch (err) {
+      console.error('Error updating center:', err);
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء تحديث المركز', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleEditCenter = () => {
-    if (!newCenterName.trim() || !editingCenter) {
-      toast({ title: 'خطأ', description: 'يرجى إدخال اسم المركز', variant: 'destructive' });
-      return;
-    }
+  const handleDeleteCenter = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('sharqia_centers')
+        .delete()
+        .eq('id', id);
 
-    if (centers.includes(newCenterName.trim()) && newCenterName.trim() !== editingCenter) {
-      toast({ title: 'خطأ', description: 'هذا المركز موجود بالفعل', variant: 'destructive' });
-      return;
-    }
+      if (error) throw error;
 
-    setCenters(centers.map(c => c === editingCenter ? newCenterName.trim() : c));
-    toast({ title: 'تم بنجاح', description: 'تم تحديث المركز' });
-    setNewCenterName('');
-    setEditingCenter(null);
-    setIsEditDialogOpen(false);
+      toast({ title: 'تم بنجاح', description: 'تم حذف المركز' });
+      fetchCenters();
+    } catch (err) {
+      console.error('Error deleting center:', err);
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء حذف المركز', variant: 'destructive' });
+    }
   };
 
-  const handleDeleteCenter = (centerName: string) => {
-    setCenters(centers.filter(c => c !== centerName));
-    toast({ title: 'تم بنجاح', description: 'تم حذف المركز' });
+  const handleToggleActive = async (center: Center) => {
+    try {
+      const { error } = await supabase
+        .from('sharqia_centers')
+        .update({ is_active: !center.is_active })
+        .eq('id', center.id);
+
+      if (error) throw error;
+
+      toast({ 
+        title: 'تم بنجاح', 
+        description: center.is_active ? 'تم تعطيل المركز' : 'تم تفعيل المركز' 
+      });
+      fetchCenters();
+    } catch (err) {
+      console.error('Error toggling center:', err);
+      toast({ title: 'خطأ', description: 'حدث خطأ', variant: 'destructive' });
+    }
   };
 
-  const openEditDialog = (centerName: string) => {
-    setEditingCenter(centerName);
-    setNewCenterName(centerName);
+  const openEditDialog = (center: Center) => {
+    setEditingCenter(center);
+    setFormData({
+      name: center.name,
+      delivery_fee: center.delivery_fee,
+      delivery_days: center.delivery_days,
+      is_active: center.is_active,
+    });
     setIsEditDialogOpen(true);
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -199,12 +234,15 @@ const AdminCenters: React.FC = () => {
             مراكز محافظة الشرقية ({centers.length})
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            التوصيل متاح لمحافظة الشرقية فقط
+            إدارة المراكز وأسعار التوصيل لكل مركز
           </p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+          setIsAddDialogOpen(open);
+          if (!open) resetForm();
+        }}>
           <DialogTrigger asChild>
-            <Button onClick={() => setNewCenterName('')}>
+            <Button>
               <Plus className="w-4 h-4 ml-2" />
               إضافة مركز
             </Button>
@@ -218,11 +256,36 @@ const AdminCenters: React.FC = () => {
                 <Label>اسم المركز</Label>
                 <Input
                   placeholder="مثال: الزقازيق"
-                  value={newCenterName}
-                  onChange={(e) => setNewCenterName(e.target.value)}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
-              <Button onClick={handleAddCenter} className="w-full">
+              <div className="space-y-2">
+                <Label>سعر التوصيل (ج.م)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.delivery_fee}
+                  onChange={(e) => setFormData({ ...formData, delivery_fee: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>مدة التوصيل</Label>
+                <Input
+                  placeholder="مثال: 1-3 أيام"
+                  value={formData.delivery_days}
+                  onChange={(e) => setFormData({ ...formData, delivery_days: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>مفعّل</Label>
+                <Switch
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
+              </div>
+              <Button onClick={handleAddCenter} className="w-full" disabled={saving}>
+                {saving && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
                 إضافة
               </Button>
             </div>
@@ -230,100 +293,39 @@ const AdminCenters: React.FC = () => {
         </Dialog>
       </CardHeader>
       <CardContent>
-        {/* Delivery Settings */}
-        <div className="mb-4 p-4 bg-muted/50 rounded-lg border border-border">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Truck className="w-5 h-5 text-primary" />
-              <span className="font-bold">إعدادات الشحن</span>
-            </div>
-            {!isEditingSettings ? (
-              <Button variant="outline" size="sm" onClick={() => setIsEditingSettings(true)}>
-                <Pencil className="w-4 h-4 ml-2" />
-                تعديل
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setIsEditingSettings(false)}
-                  disabled={savingSettings}
-                >
-                  إلغاء
-                </Button>
-                <Button 
-                  size="sm" 
-                  onClick={handleSaveDeliverySettings}
-                  disabled={savingSettings}
-                >
-                  {savingSettings ? (
-                    <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 ml-2" />
-                  )}
-                  حفظ
-                </Button>
-              </div>
-            )}
-          </div>
-          
-          {loadingSettings ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : isEditingSettings ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>مصاريف الشحن (ج.م)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={deliveryFee}
-                  onChange={(e) => setDeliveryFee(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>مدة التوصيل</Label>
-                <Input
-                  placeholder="مثال: 1-3 أيام"
-                  value={deliveryDays}
-                  onChange={(e) => setDeliveryDays(e.target.value)}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">مصاريف الشحن:</span>
-                <Badge variant="secondary">{deliveryFee} ج.م</Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium">مدة التوصيل:</span>
-                <Badge variant="outline">{deliveryDays}</Badge>
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>#</TableHead>
                 <TableHead>اسم المركز</TableHead>
+                <TableHead>سعر التوصيل</TableHead>
+                <TableHead>مدة التوصيل</TableHead>
+                <TableHead>الحالة</TableHead>
                 <TableHead className="text-left">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {centers.map((center, index) => (
-                <TableRow key={center}>
+                <TableRow key={center.id} className={!center.is_active ? 'opacity-50' : ''}>
                   <TableCell className="font-medium">{index + 1}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
-                      {center}
+                      {center.name}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{center.delivery_fee} ج.م</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{center.delivery_days}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={center.is_active}
+                      onCheckedChange={() => handleToggleActive(center)}
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -344,13 +346,13 @@ const AdminCenters: React.FC = () => {
                           <AlertDialogHeader>
                             <AlertDialogTitle>حذف المركز</AlertDialogTitle>
                             <AlertDialogDescription>
-                              هل أنت متأكد من حذف مركز "{center}"؟ لا يمكن التراجع عن هذا الإجراء.
+                              هل أنت متأكد من حذف مركز "{center.name}"؟ لا يمكن التراجع عن هذا الإجراء.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>إلغاء</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => handleDeleteCenter(center)}
+                              onClick={() => handleDeleteCenter(center.id)}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
                               حذف
@@ -367,7 +369,13 @@ const AdminCenters: React.FC = () => {
         </div>
 
         {/* Edit Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            resetForm();
+            setEditingCenter(null);
+          }
+        }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>تعديل المركز</DialogTitle>
@@ -377,11 +385,36 @@ const AdminCenters: React.FC = () => {
                 <Label>اسم المركز</Label>
                 <Input
                   placeholder="مثال: الزقازيق"
-                  value={newCenterName}
-                  onChange={(e) => setNewCenterName(e.target.value)}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
-              <Button onClick={handleEditCenter} className="w-full">
+              <div className="space-y-2">
+                <Label>سعر التوصيل (ج.م)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.delivery_fee}
+                  onChange={(e) => setFormData({ ...formData, delivery_fee: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>مدة التوصيل</Label>
+                <Input
+                  placeholder="مثال: 1-3 أيام"
+                  value={formData.delivery_days}
+                  onChange={(e) => setFormData({ ...formData, delivery_days: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>مفعّل</Label>
+                <Switch
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
+              </div>
+              <Button onClick={handleEditCenter} className="w-full" disabled={saving}>
+                {saving && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
                 حفظ التغييرات
               </Button>
             </div>
