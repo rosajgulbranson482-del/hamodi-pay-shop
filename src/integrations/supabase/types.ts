@@ -115,6 +115,47 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_areas: {
+        Row: {
+          created_at: string
+          delivery_days: string
+          delivery_fee: number
+          governorate_id: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_days?: string
+          delivery_fee?: number
+          governorate_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_days?: string
+          delivery_fee?: number
+          governorate_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_areas_governorate_id_fkey"
+            columns: ["governorate_id"]
+            isOneToOne: false
+            referencedRelation: "governorates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_settings: {
         Row: {
           created_at: string

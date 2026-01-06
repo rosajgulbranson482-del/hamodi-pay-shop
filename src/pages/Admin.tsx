@@ -16,7 +16,7 @@ const AdminProducts = lazy(() => import('@/components/admin/AdminProducts'));
 const AdminCoupons = lazy(() => import('@/components/admin/AdminCoupons'));
 const AdminReviews = lazy(() => import('@/components/admin/AdminReviews'));
 const AdminStats = lazy(() => import('@/components/admin/AdminStats'));
-const AdminCenters = lazy(() => import('@/components/admin/AdminCenters'));
+const AdminDeliveryAreas = lazy(() => import('@/components/admin/AdminDeliveryAreas'));
 const AdminStockNotifications = lazy(() => import('@/components/admin/AdminStockNotifications'));
 
 // Loading fallback component
@@ -265,7 +265,7 @@ const Admin: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="centers" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
               <MapPin className="w-4 h-4" />
-              <span className="hidden sm:inline">المراكز</span>
+              <span className="hidden sm:inline">التوصيل</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
               <BellRing className="w-4 h-4" />
@@ -295,7 +295,7 @@ const Admin: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="centers">
-              {activeTab === 'centers' && <AdminCenters />}
+              {activeTab === 'centers' && <AdminDeliveryAreas />}
             </TabsContent>
 
             <TabsContent value="notifications">

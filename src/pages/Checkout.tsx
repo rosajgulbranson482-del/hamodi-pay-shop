@@ -22,8 +22,17 @@ interface AppliedCoupon {
   discount_amount: number;
 }
 
-interface Center {
+interface Governorate {
   id: string;
+  name: string;
+  delivery_fee: number;
+  delivery_days: string;
+  is_active: boolean;
+}
+
+interface DeliveryArea {
+  id: string;
+  governorate_id: string;
   name: string;
   delivery_fee: number;
   delivery_days: string;
@@ -67,8 +76,9 @@ const CheckoutContent: React.FC = () => {
     name: '',
     phone: '',
     email: '',
-    governorate: 'الشرقية',
-    center: '',
+    governorate: '',
+    governorateId: '',
+    area: '',
     address: '',
     notes: '',
     verificationCode: '',
@@ -84,9 +94,11 @@ const CheckoutContent: React.FC = () => {
   
   // Delivery settings state
   const [deliveryFee, setDeliveryFee] = useState(50);
-  const [deliveryDays, setDeliveryDays] = useState('1-3 أيام');
-  const [centers, setCenters] = useState<Center[]>([]);
-  const [loadingCenters, setLoadingCenters] = useState(true);
+  const [deliveryDays, setDeliveryDays] = useState('2-3 أيام');
+  const [governorates, setGovernorates] = useState<Governorate[]>([]);
+  const [areas, setAreas] = useState<DeliveryArea[]>([]);
+  const [filteredAreas, setFilteredAreas] = useState<DeliveryArea[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -95,38 +107,56 @@ const CheckoutContent: React.FC = () => {
     }
   }, [items.length, navigate]);
 
-  // Fetch centers from database
+  // Fetch governorates and areas from database
   useEffect(() => {
-    const fetchCenters = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
-          .from('sharqia_centers')
-          .select('*')
-          .eq('is_active', true)
-          .order('name');
+        const [govResult, areasResult] = await Promise.all([
+          supabase.from('governorates').select('*').eq('is_active', true).order('name'),
+          supabase.from('delivery_areas').select('*').eq('is_active', true).order('name'),
+        ]);
 
-        if (error) throw error;
-        setCenters(data || []);
+        if (govResult.error) throw govResult.error;
+        if (areasResult.error) throw areasResult.error;
+
+        setGovernorates(govResult.data || []);
+        setAreas(areasResult.data || []);
       } catch (err) {
-        console.error('Error fetching centers:', err);
+        console.error('Error fetching data:', err);
       } finally {
-        setLoadingCenters(false);
+        setLoadingData(false);
       }
     };
 
-    fetchCenters();
+    fetchData();
   }, []);
 
-  // Update delivery fee when center changes
+  // Filter areas when governorate changes
   useEffect(() => {
-    if (formData.center) {
-      const selectedCenter = centers.find(c => c.name === formData.center);
-      if (selectedCenter) {
-        setDeliveryFee(selectedCenter.delivery_fee);
-        setDeliveryDays(selectedCenter.delivery_days);
+    if (formData.governorateId) {
+      const govAreas = areas.filter(a => a.governorate_id === formData.governorateId);
+      setFilteredAreas(govAreas);
+      // Reset area when governorate changes
+      setFormData(prev => ({ ...prev, area: '' }));
+      // Set default delivery fee from governorate if no areas
+      const selectedGov = governorates.find(g => g.id === formData.governorateId);
+      if (selectedGov && govAreas.length === 0) {
+        setDeliveryFee(selectedGov.delivery_fee);
+        setDeliveryDays(selectedGov.delivery_days);
       }
     }
-  }, [formData.center, centers]);
+  }, [formData.governorateId, areas, governorates]);
+
+  // Update delivery fee when area changes
+  useEffect(() => {
+    if (formData.area) {
+      const selectedArea = filteredAreas.find(a => a.name === formData.area);
+      if (selectedArea) {
+        setDeliveryFee(selectedArea.delivery_fee);
+        setDeliveryDays(selectedArea.delivery_days);
+      }
+    }
+  }, [formData.area, filteredAreas]);
 
 
   // Show welcome message when returning after login
@@ -224,8 +254,8 @@ const CheckoutContent: React.FC = () => {
     setSavingAddress(true);
     
     const { error } = await updateProfile({
-      default_address: `${formData.center} - ${formData.address}`,
-      default_governorate: 'الشرقية',
+      default_address: `${formData.governorate} - ${formData.area} - ${formData.address}`,
+      default_governorate: formData.governorate,
     });
     
     setSavingAddress(false);
@@ -271,7 +301,7 @@ const CheckoutContent: React.FC = () => {
       return;
     }
 
-    if (!formData.name || !formData.phone || !formData.center || !formData.address) {
+    if (!formData.name || !formData.phone || !formData.governorate || !formData.address) {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع البيانات المطلوبة",
@@ -321,7 +351,7 @@ const CheckoutContent: React.FC = () => {
           customer_name: formData.name,
           customer_phone: formData.phone,
           customer_email: formData.email || null,
-          customer_address: `${formData.center} - ${formData.address}`,
+          customer_address: `${formData.area ? formData.area + ' - ' : ''}${formData.address}`,
           governorate: formData.governorate,
           payment_method: formData.paymentMethod,
           notes: formData.notes || null,
@@ -364,7 +394,7 @@ const CheckoutContent: React.FC = () => {
 👤 *العميل:* ${formData.name}
 📱 *الهاتف:* ${formData.phone}
 📍 *المحافظة:* ${formData.governorate}
-🏘️ *المركز:* ${formData.center}
+${formData.area ? `🏘️ *المنطقة:* ${formData.area}` : ''}
 🏠 *العنوان:* ${formData.address}
 ${formData.notes ? `📝 *ملاحظات:* ${formData.notes}` : ''}
 
@@ -474,48 +504,68 @@ ${orderItemsText}
                     />
                   </div>
 
-                  {/* Governorate - Fixed to Sharqia */}
+                  {/* Governorate Selection */}
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-primary" />
                       المحافظة
                     </Label>
-                    <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">محافظة الشرقية</span>
-                        <span className="text-sm text-muted-foreground">
-                          توصيل: {deliveryFee} ج.م ({deliveryDays})
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        نوصل لجميع مراكز محافظة الشرقية فقط
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Center Selection */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-primary" />
-                      المركز / المدينة
-                    </Label>
                     <Select
-                      value={formData.center}
-                      onValueChange={(value) => handleInputChange('center', value)}
-                      disabled={loadingCenters}
+                      value={formData.governorateId}
+                      onValueChange={(value) => {
+                        const gov = governorates.find(g => g.id === value);
+                        handleInputChange('governorateId', value);
+                        handleInputChange('governorate', gov?.name || '');
+                      }}
+                      disabled={loadingData}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={loadingCenters ? "جاري التحميل..." : "اختر المركز"} />
+                        <SelectValue placeholder={loadingData ? "جاري التحميل..." : "اختر المحافظة"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {centers.map((center) => (
-                          <SelectItem key={center.id} value={center.name}>
-                            {center.name} ({center.delivery_fee} ج.م)
+                        {governorates.map((gov) => (
+                          <SelectItem key={gov.id} value={gov.id}>
+                            {gov.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Area Selection - Only show if governorate is selected and has areas */}
+                  {formData.governorateId && filteredAreas.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        المنطقة / المركز
+                      </Label>
+                      <Select
+                        value={formData.area}
+                        onValueChange={(value) => handleInputChange('area', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر المنطقة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredAreas.map((area) => (
+                            <SelectItem key={area.id} value={area.name}>
+                              {area.name} ({area.delivery_fee} ج.م)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Delivery Info */}
+                  {formData.governorateId && (
+                    <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">سعر التوصيل:</span>
+                        <span className="font-medium">{deliveryFee} ج.م ({deliveryDays})</span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Address */}
                   <div className="space-y-2">
