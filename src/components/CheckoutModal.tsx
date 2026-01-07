@@ -494,6 +494,9 @@ ${orderItemsText}
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded-md">
+                  ⚠️ التوصيل غير متاح حالياً لمحافظات الصعيد (أسوان، الأقصر، قنا، سوهاج، أسيوط، المنيا، بني سويف، الفيوم، الوادي الجديد)
+                </p>
               </div>
 
               {/* Area Selection - Show only when governorate is selected and has areas */}
