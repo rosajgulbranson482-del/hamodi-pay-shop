@@ -45,8 +45,14 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { Plus, Pencil, Trash2, MapPin, Loader2, Globe, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Loader2, Globe, ChevronDown, ChevronUp, Gift, Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+
+interface DeliverySettings {
+  id: string;
+  free_delivery_enabled: boolean;
+  free_delivery_threshold: number;
+}
 
 interface Governorate {
   id: string;
@@ -80,6 +86,12 @@ const AdminDeliveryAreas: React.FC = () => {
   const [selectedGovernorate, setSelectedGovernorate] = useState<string>('');
   const [expandedGovernorates, setExpandedGovernorates] = useState<Set<string>>(new Set());
   
+  // Free delivery settings
+  const [deliverySettings, setDeliverySettings] = useState<DeliverySettings | null>(null);
+  const [freeDeliveryEnabled, setFreeDeliveryEnabled] = useState(false);
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(0);
+  const [savingSettings, setSavingSettings] = useState(false);
+  
   const [govFormData, setGovFormData] = useState({
     name: '',
     delivery_fee: 50,
@@ -97,9 +109,10 @@ const AdminDeliveryAreas: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const [govResult, areasResult] = await Promise.all([
+      const [govResult, areasResult, settingsResult] = await Promise.all([
         supabase.from('governorates').select('*').order('name'),
         supabase.from('delivery_areas').select('*').order('name'),
+        supabase.from('delivery_settings').select('*').limit(1).single(),
       ]);
 
       if (govResult.error) throw govResult.error;
@@ -107,11 +120,51 @@ const AdminDeliveryAreas: React.FC = () => {
 
       setGovernorates(govResult.data || []);
       setAreas(areasResult.data || []);
+      
+      if (settingsResult.data) {
+        setDeliverySettings(settingsResult.data);
+        setFreeDeliveryEnabled(settingsResult.data.free_delivery_enabled || false);
+        setFreeDeliveryThreshold(settingsResult.data.free_delivery_threshold || 0);
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
       toast({ title: 'خطأ', description: 'حدث خطأ في تحميل البيانات', variant: 'destructive' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveDeliverySettings = async () => {
+    setSavingSettings(true);
+    try {
+      if (deliverySettings?.id) {
+        const { error } = await supabase
+          .from('delivery_settings')
+          .update({
+            free_delivery_enabled: freeDeliveryEnabled,
+            free_delivery_threshold: freeDeliveryThreshold,
+          })
+          .eq('id', deliverySettings.id);
+        
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('delivery_settings')
+          .insert({
+            free_delivery_enabled: freeDeliveryEnabled,
+            free_delivery_threshold: freeDeliveryThreshold,
+          });
+        
+        if (error) throw error;
+      }
+      
+      toast({ title: 'تم الحفظ', description: 'تم حفظ إعدادات التوصيل المجاني' });
+      fetchData();
+    } catch (err) {
+      console.error('Error saving delivery settings:', err);
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء الحفظ', variant: 'destructive' });
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -382,18 +435,74 @@ const AdminDeliveryAreas: React.FC = () => {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4">
-        <div>
+    <div className="space-y-6">
+      {/* Free Delivery Settings Card */}
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Globe className="w-5 h-5" />
-            إدارة مناطق التوصيل ({governorates.length} محافظة - {areas.length} منطقة)
+            <Gift className="w-5 h-5 text-green-500" />
+            التوصيل المجاني
           </CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            إدارة المحافظات والمناطق وأسعار التوصيل
+          <p className="text-sm text-muted-foreground">
+            تفعيل التوصيل المجاني للطلبات التي تتجاوز مبلغ معين
           </p>
-        </div>
-        <div className="flex gap-2">
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="free-delivery"
+                  checked={freeDeliveryEnabled}
+                  onCheckedChange={setFreeDeliveryEnabled}
+                />
+                <Label htmlFor="free-delivery">تفعيل التوصيل المجاني</Label>
+              </div>
+            </div>
+            
+            {freeDeliveryEnabled && (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="threshold" className="whitespace-nowrap">الحد الأدنى للطلب:</Label>
+                <Input
+                  id="threshold"
+                  type="number"
+                  min="0"
+                  value={freeDeliveryThreshold}
+                  onChange={(e) => setFreeDeliveryThreshold(Number(e.target.value))}
+                  className="w-32"
+                />
+                <span className="text-muted-foreground">ج.م</span>
+              </div>
+            )}
+            
+            <Button onClick={handleSaveDeliverySettings} disabled={savingSettings} className="gap-2">
+              {savingSettings && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Truck className="w-4 h-4" />
+              حفظ الإعدادات
+            </Button>
+          </div>
+          
+          {freeDeliveryEnabled && freeDeliveryThreshold > 0 && (
+            <p className="mt-4 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+              🎉 التوصيل مجاني للطلبات فوق {freeDeliveryThreshold} ج.م
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delivery Areas Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="w-5 h-5" />
+              إدارة مناطق التوصيل ({governorates.length} محافظة - {areas.length} منطقة)
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              إدارة المحافظات والمناطق وأسعار التوصيل
+            </p>
+          </div>
+          <div className="flex gap-2">
           <Dialog open={isAddGovDialogOpen} onOpenChange={(open) => {
             setIsAddGovDialogOpen(open);
             if (!open) resetGovForm();
@@ -801,6 +910,7 @@ const AdminDeliveryAreas: React.FC = () => {
         </Dialog>
       </CardContent>
     </Card>
+    </div>
   );
 };
 

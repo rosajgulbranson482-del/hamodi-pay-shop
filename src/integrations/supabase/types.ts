@@ -161,6 +161,8 @@ export type Database = {
           created_at: string
           delivery_days: string
           delivery_fee: number
+          free_delivery_enabled: boolean | null
+          free_delivery_threshold: number | null
           id: string
           updated_at: string
         }
@@ -168,6 +170,8 @@ export type Database = {
           created_at?: string
           delivery_days?: string
           delivery_fee?: number
+          free_delivery_enabled?: boolean | null
+          free_delivery_threshold?: number | null
           id?: string
           updated_at?: string
         }
@@ -175,6 +179,8 @@ export type Database = {
           created_at?: string
           delivery_days?: string
           delivery_fee?: number
+          free_delivery_enabled?: boolean | null
+          free_delivery_threshold?: number | null
           id?: string
           updated_at?: string
         }
