@@ -99,6 +99,11 @@ const CheckoutContent: React.FC = () => {
   const [areas, setAreas] = useState<DeliveryArea[]>([]);
   const [filteredAreas, setFilteredAreas] = useState<DeliveryArea[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  
+  // Free delivery settings
+  const [freeDeliveryEnabled, setFreeDeliveryEnabled] = useState(false);
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(0);
+  const [originalDeliveryFee, setOriginalDeliveryFee] = useState(50);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -111,9 +116,10 @@ const CheckoutContent: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [govResult, areasResult] = await Promise.all([
+        const [govResult, areasResult, settingsResult] = await Promise.all([
           supabase.from('governorates').select('*').eq('is_active', true).order('name'),
           supabase.from('delivery_areas').select('*').eq('is_active', true).order('name'),
+          supabase.from('delivery_settings').select('*').limit(1).single(),
         ]);
 
         if (govResult.error) throw govResult.error;
@@ -121,6 +127,11 @@ const CheckoutContent: React.FC = () => {
 
         setGovernorates(govResult.data || []);
         setAreas(areasResult.data || []);
+        
+        if (settingsResult.data) {
+          setFreeDeliveryEnabled(settingsResult.data.free_delivery_enabled || false);
+          setFreeDeliveryThreshold(settingsResult.data.free_delivery_threshold || 0);
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
       } finally {
@@ -141,11 +152,31 @@ const CheckoutContent: React.FC = () => {
       // Set default delivery fee from governorate if no areas
       const selectedGov = governorates.find(g => g.id === formData.governorateId);
       if (selectedGov && govAreas.length === 0) {
-        setDeliveryFee(selectedGov.delivery_fee);
+        setOriginalDeliveryFee(selectedGov.delivery_fee);
         setDeliveryDays(selectedGov.delivery_days);
       }
     }
   }, [formData.governorateId, areas, governorates]);
+
+  // Update delivery fee when area changes
+  useEffect(() => {
+    if (formData.area) {
+      const selectedArea = filteredAreas.find(a => a.name === formData.area);
+      if (selectedArea) {
+        setOriginalDeliveryFee(selectedArea.delivery_fee);
+        setDeliveryDays(selectedArea.delivery_days);
+      }
+    }
+  }, [formData.area, filteredAreas]);
+
+  // Calculate actual delivery fee based on free delivery threshold
+  useEffect(() => {
+    if (freeDeliveryEnabled && totalPrice >= freeDeliveryThreshold && freeDeliveryThreshold > 0) {
+      setDeliveryFee(0);
+    } else {
+      setDeliveryFee(originalDeliveryFee);
+    }
+  }, [freeDeliveryEnabled, freeDeliveryThreshold, totalPrice, originalDeliveryFee]);
 
   // Update delivery fee when area changes
   useEffect(() => {
@@ -562,8 +593,20 @@ ${orderItemsText}
                     <div className="p-3 bg-muted/50 rounded-lg border border-border">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">سعر التوصيل:</span>
-                        <span className="font-medium">{deliveryFee} ج.م ({deliveryDays})</span>
+                        {freeDeliveryEnabled && totalPrice >= freeDeliveryThreshold && freeDeliveryThreshold > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <span className="line-through text-muted-foreground">{originalDeliveryFee} ج.م</span>
+                            <span className="font-medium text-green-600">مجاني! 🎉</span>
+                          </div>
+                        ) : (
+                          <span className="font-medium">{deliveryFee} ج.م ({deliveryDays})</span>
+                        )}
                       </div>
+                      {freeDeliveryEnabled && freeDeliveryThreshold > 0 && totalPrice < freeDeliveryThreshold && (
+                        <p className="text-xs text-primary mt-2">
+                          💡 أضف منتجات بقيمة {freeDeliveryThreshold - totalPrice} ج.م للحصول على توصيل مجاني!
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -836,7 +879,14 @@ ${orderItemsText}
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">التوصيل:</span>
-                    <span>{deliveryFee > 0 ? `${deliveryFee} ج.م` : 'اختر المحافظة'}</span>
+                    {freeDeliveryEnabled && totalPrice >= freeDeliveryThreshold && freeDeliveryThreshold > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <span className="line-through text-muted-foreground text-xs">{originalDeliveryFee} ج.م</span>
+                        <span className="text-green-600 font-medium">مجاني</span>
+                      </div>
+                    ) : (
+                      <span>{deliveryFee > 0 ? `${deliveryFee} ج.م` : 'اختر المحافظة'}</span>
+                    )}
                   </div>
                   {appliedCoupon && (
                     <div className="flex justify-between text-sm text-green-600">

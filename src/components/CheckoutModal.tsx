@@ -92,18 +92,24 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   
   // Delivery settings state
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [originalDeliveryFee, setOriginalDeliveryFee] = useState(0);
   const [deliveryDays, setDeliveryDays] = useState('2-3 أيام');
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [deliveryAreas, setDeliveryAreas] = useState<DeliveryArea[]>([]);
   const [loadingGovernorates, setLoadingGovernorates] = useState(true);
+  
+  // Free delivery settings
+  const [freeDeliveryEnabled, setFreeDeliveryEnabled] = useState(false);
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(0);
 
   // Fetch governorates and delivery areas from database
   useEffect(() => {
     const fetchDeliveryData = async () => {
       try {
-        const [govResponse, areasResponse] = await Promise.all([
+        const [govResponse, areasResponse, settingsResponse] = await Promise.all([
           supabase.from('governorates').select('*').eq('is_active', true).order('name'),
-          supabase.from('delivery_areas').select('*').eq('is_active', true).order('name')
+          supabase.from('delivery_areas').select('*').eq('is_active', true).order('name'),
+          supabase.from('delivery_settings').select('*').limit(1).single()
         ]);
 
         if (govResponse.error) throw govResponse.error;
@@ -111,6 +117,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         
         setGovernorates(govResponse.data || []);
         setDeliveryAreas(areasResponse.data || []);
+        
+        if (settingsResponse.data) {
+          setFreeDeliveryEnabled(settingsResponse.data.free_delivery_enabled || false);
+          setFreeDeliveryThreshold(settingsResponse.data.free_delivery_threshold || 0);
+        }
       } catch (err) {
         console.error('Error fetching delivery data:', err);
       } finally {
@@ -128,12 +139,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     ? deliveryAreas.filter(a => a.governorate_id === formData.governorate)
     : [];
 
-  // Update delivery fee when governorate or area changes
+  // Update original delivery fee when governorate or area changes
   useEffect(() => {
     if (formData.area) {
       const selectedArea = deliveryAreas.find(a => a.id === formData.area);
       if (selectedArea) {
-        setDeliveryFee(Number(selectedArea.delivery_fee));
+        setOriginalDeliveryFee(Number(selectedArea.delivery_fee));
         setDeliveryDays(selectedArea.delivery_days);
         return;
       }
@@ -142,11 +153,20 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     if (formData.governorate) {
       const selectedGov = governorates.find(g => g.id === formData.governorate);
       if (selectedGov) {
-        setDeliveryFee(Number(selectedGov.delivery_fee));
+        setOriginalDeliveryFee(Number(selectedGov.delivery_fee));
         setDeliveryDays(selectedGov.delivery_days);
       }
     }
   }, [formData.governorate, formData.area, governorates, deliveryAreas]);
+
+  // Calculate actual delivery fee based on free delivery threshold
+  useEffect(() => {
+    if (freeDeliveryEnabled && totalPrice >= freeDeliveryThreshold && freeDeliveryThreshold > 0) {
+      setDeliveryFee(0);
+    } else {
+      setDeliveryFee(originalDeliveryFee);
+    }
+  }, [freeDeliveryEnabled, freeDeliveryThreshold, totalPrice, originalDeliveryFee]);
 
   // Reset area when governorate changes
   useEffect(() => {
