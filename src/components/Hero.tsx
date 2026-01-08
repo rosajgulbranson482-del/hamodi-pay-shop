@@ -2,10 +2,15 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Truck, Shield, CreditCard } from 'lucide-react';
 import PromoBanner from '@/components/PromoBanner';
+import FreeDeliveryBanner from '@/components/FreeDeliveryBanner';
 
 const Hero: React.FC = () => {
   return (
-    <section className="relative overflow-hidden gradient-hero text-primary-foreground py-10 md:py-24">
+    <>
+      {/* Free Delivery Banner */}
+      <FreeDeliveryBanner />
+      
+      <section className="relative overflow-hidden gradient-hero text-primary-foreground py-10 md:py-24">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 right-10 w-48 md:w-72 h-48 md:h-72 bg-secondary rounded-full blur-3xl" />
@@ -65,6 +70,7 @@ const Hero: React.FC = () => {
         </div>
       </div>
     </section>
+    </>
   );
 };
 

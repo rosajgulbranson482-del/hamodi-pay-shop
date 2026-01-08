@@ -1,5 +1,5 @@
 import React, { useState, useCallback, memo } from 'react';
-import { ShoppingCart, Check, ChevronRight, ChevronLeft, Heart } from 'lucide-react';
+import { ShoppingCart, Check, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
@@ -7,6 +7,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import NotifyWhenAvailable from '@/components/NotifyWhenAvailable';
+import OptimizedImage from '@/components/OptimizedImage';
 
 interface Product {
   id: string;
@@ -78,19 +79,12 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
     <div className="group bg-card rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-border/50 hover:border-primary/30 animate-fade-in">
       {/* Image */}
       <Link to={`/product/${product.id}`} className="block relative aspect-square overflow-hidden bg-muted">
-        {!imageLoaded && (
-          <div className="absolute inset-0 bg-muted animate-pulse" />
-        )}
-        <img
+        <OptimizedImage
           src={product.image || '/placeholder.svg'}
           alt={product.name}
-          loading="lazy"
-          decoding="async"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          containerClassName="w-full h-full"
           onLoad={() => setImageLoaded(true)}
-          className={cn(
-            "w-full h-full object-cover transition-all duration-500 group-hover:scale-110",
-            imageLoaded ? "opacity-100" : "opacity-0"
-          )}
         />
         
         {/* Favorite Button */}
