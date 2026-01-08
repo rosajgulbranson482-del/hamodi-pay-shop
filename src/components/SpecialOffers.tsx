@@ -8,6 +8,7 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery } from '@tanstack/react-query';
+import OptimizedImage from '@/components/OptimizedImage';
 
 interface Product {
   id: string;
@@ -38,19 +39,12 @@ const OfferCard = memo(({ product, isInCart, onAddToCart }: {
       <div className="bg-card rounded-xl md:rounded-2xl overflow-hidden border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300">
         {/* Image */}
         <div className="relative aspect-square overflow-hidden bg-muted">
-          {!imageLoaded && (
-            <div className="absolute inset-0 bg-muted animate-pulse" />
-          )}
-          <img
+          <OptimizedImage
             src={product.image || '/placeholder.svg'}
             alt={product.name}
-            loading="lazy"
-            decoding="async"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            containerClassName="w-full h-full"
             onLoad={() => setImageLoaded(true)}
-            className={cn(
-              "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300",
-              imageLoaded ? "opacity-100" : "opacity-0"
-            )}
           />
           
           {/* Discount Badge */}
