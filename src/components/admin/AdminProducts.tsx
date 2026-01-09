@@ -13,7 +13,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Loader2, Package, Upload, X, Image, GripVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, Package, Upload, X, Image, GripVertical, Zap } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 interface ProductImage {
   id: string;
@@ -51,6 +52,8 @@ const AdminProducts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [compressingAll, setCompressingAll] = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState({ current: 0, total: 0 });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
@@ -234,6 +237,111 @@ const AdminProducts: React.FC = () => {
     });
 
     return publicUrl;
+  };
+
+  // Compress and re-upload existing image from URL
+  const compressExistingImage = async (imageUrl: string): Promise<string | null> => {
+    try {
+      // Fetch the image
+      const response = await fetch(imageUrl);
+      if (!response.ok) return null;
+      
+      const blob = await response.blob();
+      const file = new File([blob], 'image.jpg', { type: blob.type });
+      
+      // Compress the image
+      const compressedFile = await compressImage(file);
+      
+      // Upload compressed version
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+      const filePath = `products/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, compressedFile, {
+          contentType: 'image/webp',
+          cacheControl: '31536000',
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        return null;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error compressing existing image:', error);
+      return null;
+    }
+  };
+
+  // Compress all existing product images
+  const compressAllImages = async () => {
+    setCompressingAll(true);
+    
+    // Get all products with images
+    const productsWithImages = products.filter(p => p.image);
+    
+    // Get all additional images
+    const { data: allProductImages } = await supabase
+      .from('product_images')
+      .select('*');
+    
+    const totalImages = productsWithImages.length + (allProductImages?.length || 0);
+    setCompressionProgress({ current: 0, total: totalImages });
+    
+    let compressed = 0;
+    let failed = 0;
+    
+    // Compress main product images
+    for (const product of productsWithImages) {
+      if (product.image && !product.image.includes('.webp')) {
+        const newUrl = await compressExistingImage(product.image);
+        if (newUrl) {
+          await supabase
+            .from('products')
+            .update({ image: newUrl })
+            .eq('id', product.id);
+          compressed++;
+        } else {
+          failed++;
+        }
+      }
+      setCompressionProgress(prev => ({ ...prev, current: prev.current + 1 }));
+    }
+    
+    // Compress additional product images
+    if (allProductImages) {
+      for (const img of allProductImages) {
+        if (img.image_url && !img.image_url.includes('.webp')) {
+          const newUrl = await compressExistingImage(img.image_url);
+          if (newUrl) {
+            await supabase
+              .from('product_images')
+              .update({ image_url: newUrl })
+              .eq('id', img.id);
+            compressed++;
+          } else {
+            failed++;
+          }
+        }
+        setCompressionProgress(prev => ({ ...prev, current: prev.current + 1 }));
+      }
+    }
+    
+    setCompressingAll(false);
+    setCompressionProgress({ current: 0, total: 0 });
+    
+    toast({
+      title: "تم ضغط الصور",
+      description: `تم ضغط ${compressed} صورة${failed > 0 ? ` (فشل ${failed})` : ''}`,
+    });
+    
+    fetchProducts();
   };
 
   const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -421,18 +529,44 @@ const AdminProducts: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Compression Progress Banner */}
+      {compressingAll && (
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="font-medium">جاري ضغط الصور...</span>
+            <span className="text-sm text-muted-foreground">
+              ({compressionProgress.current} / {compressionProgress.total})
+            </span>
+          </div>
+          <Progress 
+            value={(compressionProgress.current / compressionProgress.total) * 100} 
+            className="h-2"
+          />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-xl font-bold">إدارة المنتجات</h2>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 ml-2" />
-              إضافة منتج
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={compressAllImages}
+            disabled={compressingAll || products.length === 0}
+          >
+            <Zap className="w-4 h-4 ml-2" />
+            ضغط كل الصور
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 ml-2" />
+                إضافة منتج
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
             <DialogHeader>
               <DialogTitle>
@@ -639,6 +773,7 @@ const AdminProducts: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {products.length === 0 ? (
