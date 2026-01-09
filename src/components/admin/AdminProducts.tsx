@@ -46,6 +46,15 @@ const categories = [
   'أخرى'
 ];
 
+interface CompressionReportItem {
+  name: string;
+  originalSize: number;
+  compressedSize: number;
+  savedBytes: number;
+  savedPercent: number;
+  status: 'success' | 'failed' | 'skipped';
+}
+
 const AdminProducts: React.FC = () => {
   const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
@@ -54,6 +63,8 @@ const AdminProducts: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [compressingAll, setCompressingAll] = useState(false);
   const [compressionProgress, setCompressionProgress] = useState({ current: 0, total: 0 });
+  const [compressionReport, setCompressionReport] = useState<CompressionReportItem[]>([]);
+  const [showReport, setShowReport] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
@@ -239,18 +250,20 @@ const AdminProducts: React.FC = () => {
     return publicUrl;
   };
 
-  // Compress and re-upload existing image from URL
-  const compressExistingImage = async (imageUrl: string): Promise<string | null> => {
+  // Compress and re-upload existing image from URL with size tracking
+  const compressExistingImage = async (imageUrl: string, imageName: string): Promise<{ newUrl: string | null; originalSize: number; compressedSize: number }> => {
     try {
       // Fetch the image
       const response = await fetch(imageUrl);
-      if (!response.ok) return null;
+      if (!response.ok) return { newUrl: null, originalSize: 0, compressedSize: 0 };
       
       const blob = await response.blob();
+      const originalSize = blob.size;
       const file = new File([blob], 'image.jpg', { type: blob.type });
       
       // Compress the image
       const compressedFile = await compressImage(file);
+      const compressedSize = compressedFile.size;
       
       // Upload compressed version
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
@@ -265,23 +278,27 @@ const AdminProducts: React.FC = () => {
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        return null;
+        return { newUrl: null, originalSize, compressedSize: 0 };
       }
 
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
         .getPublicUrl(filePath);
 
-      return publicUrl;
+      return { newUrl: publicUrl, originalSize, compressedSize };
     } catch (error) {
       console.error('Error compressing existing image:', error);
-      return null;
+      return { newUrl: null, originalSize: 0, compressedSize: 0 };
     }
   };
 
-  // Compress all existing product images
+  // Compress all existing product images with detailed report
   const compressAllImages = async () => {
     setCompressingAll(true);
+    setCompressionReport([]);
+    setShowReport(false);
+    
+    const report: CompressionReportItem[] = [];
     
     // Get all products with images
     const productsWithImages = products.filter(p => p.image);
@@ -296,20 +313,53 @@ const AdminProducts: React.FC = () => {
     
     let compressed = 0;
     let failed = 0;
+    let skipped = 0;
+    let totalSaved = 0;
     
     // Compress main product images
     for (const product of productsWithImages) {
       if (product.image && !product.image.includes('.webp')) {
-        const newUrl = await compressExistingImage(product.image);
-        if (newUrl) {
+        const result = await compressExistingImage(product.image, product.name);
+        if (result.newUrl) {
           await supabase
             .from('products')
-            .update({ image: newUrl })
+            .update({ image: result.newUrl })
             .eq('id', product.id);
+          
+          const savedBytes = result.originalSize - result.compressedSize;
+          const savedPercent = result.originalSize > 0 ? (savedBytes / result.originalSize) * 100 : 0;
+          totalSaved += savedBytes;
+          
+          report.push({
+            name: product.name,
+            originalSize: result.originalSize,
+            compressedSize: result.compressedSize,
+            savedBytes,
+            savedPercent,
+            status: 'success'
+          });
           compressed++;
         } else {
+          report.push({
+            name: product.name,
+            originalSize: result.originalSize,
+            compressedSize: 0,
+            savedBytes: 0,
+            savedPercent: 0,
+            status: 'failed'
+          });
           failed++;
         }
+      } else if (product.image?.includes('.webp')) {
+        report.push({
+          name: product.name,
+          originalSize: 0,
+          compressedSize: 0,
+          savedBytes: 0,
+          savedPercent: 0,
+          status: 'skipped'
+        });
+        skipped++;
       }
       setCompressionProgress(prev => ({ ...prev, current: prev.current + 1 }));
     }
@@ -317,17 +367,50 @@ const AdminProducts: React.FC = () => {
     // Compress additional product images
     if (allProductImages) {
       for (const img of allProductImages) {
+        const productName = products.find(p => p.id === img.product_id)?.name || 'صورة إضافية';
+        
         if (img.image_url && !img.image_url.includes('.webp')) {
-          const newUrl = await compressExistingImage(img.image_url);
-          if (newUrl) {
+          const result = await compressExistingImage(img.image_url, productName);
+          if (result.newUrl) {
             await supabase
               .from('product_images')
-              .update({ image_url: newUrl })
+              .update({ image_url: result.newUrl })
               .eq('id', img.id);
+            
+            const savedBytes = result.originalSize - result.compressedSize;
+            const savedPercent = result.originalSize > 0 ? (savedBytes / result.originalSize) * 100 : 0;
+            totalSaved += savedBytes;
+            
+            report.push({
+              name: `${productName} (إضافية)`,
+              originalSize: result.originalSize,
+              compressedSize: result.compressedSize,
+              savedBytes,
+              savedPercent,
+              status: 'success'
+            });
             compressed++;
           } else {
+            report.push({
+              name: `${productName} (إضافية)`,
+              originalSize: result.originalSize,
+              compressedSize: 0,
+              savedBytes: 0,
+              savedPercent: 0,
+              status: 'failed'
+            });
             failed++;
           }
+        } else if (img.image_url?.includes('.webp')) {
+          report.push({
+            name: `${productName} (إضافية)`,
+            originalSize: 0,
+            compressedSize: 0,
+            savedBytes: 0,
+            savedPercent: 0,
+            status: 'skipped'
+          });
+          skipped++;
         }
         setCompressionProgress(prev => ({ ...prev, current: prev.current + 1 }));
       }
@@ -335,13 +418,25 @@ const AdminProducts: React.FC = () => {
     
     setCompressingAll(false);
     setCompressionProgress({ current: 0, total: 0 });
+    setCompressionReport(report);
+    setShowReport(true);
+    
+    const totalSavedMB = (totalSaved / (1024 * 1024)).toFixed(2);
     
     toast({
       title: "تم ضغط الصور",
-      description: `تم ضغط ${compressed} صورة${failed > 0 ? ` (فشل ${failed})` : ''}`,
+      description: `تم ضغط ${compressed} صورة | تم توفير ${totalSavedMB} MB${failed > 0 ? ` | فشل ${failed}` : ''}${skipped > 0 ? ` | تم تخطي ${skipped}` : ''}`,
     });
     
     fetchProducts();
+  };
+  
+  // Format bytes to human readable
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
   const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -543,6 +638,110 @@ const AdminProducts: React.FC = () => {
             value={(compressionProgress.current / compressionProgress.total) * 100} 
             className="h-2"
           />
+        </div>
+      )}
+      
+      {/* Compression Report */}
+      {showReport && compressionReport.length > 0 && (
+        <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-lg">📊 تقرير ضغط الصور</h3>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowReport(false)}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {compressionReport.filter(r => r.status === 'success').length}
+              </div>
+              <div className="text-sm text-muted-foreground">تم ضغطها</div>
+            </div>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-red-600">
+                {compressionReport.filter(r => r.status === 'failed').length}
+              </div>
+              <div className="text-sm text-muted-foreground">فشل</div>
+            </div>
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-yellow-600">
+                {compressionReport.filter(r => r.status === 'skipped').length}
+              </div>
+              <div className="text-sm text-muted-foreground">تم تخطيها</div>
+            </div>
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-primary">
+                {formatBytes(compressionReport.reduce((sum, r) => sum + r.savedBytes, 0))}
+              </div>
+              <div className="text-sm text-muted-foreground">إجمالي التوفير</div>
+            </div>
+          </div>
+          
+          {/* Detailed Table */}
+          <div className="max-h-64 overflow-y-auto border border-border rounded-lg">
+            <table className="w-full text-sm">
+              <thead className="bg-muted sticky top-0">
+                <tr>
+                  <th className="text-right p-2">الصورة</th>
+                  <th className="text-right p-2">قبل</th>
+                  <th className="text-right p-2">بعد</th>
+                  <th className="text-right p-2">التوفير</th>
+                  <th className="text-right p-2">الحالة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compressionReport.map((item, index) => (
+                  <tr key={index} className="border-t border-border hover:bg-muted/50">
+                    <td className="p-2 max-w-[150px] truncate" title={item.name}>
+                      {item.name}
+                    </td>
+                    <td className="p-2 text-muted-foreground">
+                      {item.status === 'skipped' ? '-' : formatBytes(item.originalSize)}
+                    </td>
+                    <td className="p-2 text-muted-foreground">
+                      {item.status === 'skipped' ? '-' : item.status === 'failed' ? '-' : formatBytes(item.compressedSize)}
+                    </td>
+                    <td className="p-2">
+                      {item.status === 'success' && (
+                        <span className="text-green-600 font-medium">
+                          {item.savedPercent.toFixed(0)}% ({formatBytes(item.savedBytes)})
+                        </span>
+                      )}
+                      {item.status === 'skipped' && (
+                        <span className="text-yellow-600">مضغوطة مسبقاً</span>
+                      )}
+                      {item.status === 'failed' && (
+                        <span className="text-red-600">-</span>
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {item.status === 'success' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-500/10 text-green-600">
+                          ✓ نجح
+                        </span>
+                      )}
+                      {item.status === 'failed' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-500/10 text-red-600">
+                          ✗ فشل
+                        </span>
+                      )}
+                      {item.status === 'skipped' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-yellow-500/10 text-yellow-600">
+                          ⊘ تخطي
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
