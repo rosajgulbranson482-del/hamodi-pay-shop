@@ -136,24 +136,87 @@ const AdminProducts: React.FC = () => {
     setIsDialogOpen(true);
   };
 
+  // Compress image before upload
+  const compressImage = async (file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = document.createElement('img');
+      
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        
+        // Calculate new dimensions while maintaining aspect ratio
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw image with high quality
+        ctx!.imageSmoothingEnabled = true;
+        ctx!.imageSmoothingQuality = 'high';
+        ctx!.drawImage(img, 0, 0, width, height);
+        
+        // Convert to WebP for better compression (fallback to JPEG)
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File(
+                [blob], 
+                file.name.replace(/\.[^/.]+$/, '.webp'),
+                { type: 'image/webp' }
+              );
+              console.log(`Image compressed: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB`);
+              resolve(compressedFile);
+            } else {
+              resolve(file); // Fallback to original if compression fails
+            }
+          },
+          'image/webp',
+          quality
+        );
+      };
+      
+      img.onerror = () => resolve(file); // Fallback to original on error
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const uploadImage = async (file: File): Promise<string | null> => {
     if (!file.type.startsWith('image/')) {
       toast({ title: "خطأ", description: "يرجى اختيار ملف صورة", variant: "destructive" });
       return null;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "خطأ", description: "حجم الصورة يجب أن يكون أقل من 5MB", variant: "destructive" });
+    if (file.size > 10 * 1024 * 1024) { // Increased limit since we'll compress
+      toast({ title: "خطأ", description: "حجم الصورة يجب أن يكون أقل من 10MB", variant: "destructive" });
       return null;
     }
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    // Compress the image before upload
+    const originalSize = file.size;
+    const compressedFile = await compressImage(file);
+    const compressionRatio = ((1 - compressedFile.size / originalSize) * 100).toFixed(0);
+    
+    console.log(`Compression ratio: ${compressionRatio}%`);
+
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
     const filePath = `products/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('product-images')
-      .upload(filePath, file);
+      .upload(filePath, compressedFile, {
+        contentType: 'image/webp',
+        cacheControl: '31536000', // Cache for 1 year
+      });
 
     if (uploadError) {
       toast({ title: "خطأ", description: uploadError.message, variant: "destructive" });
@@ -163,6 +226,12 @@ const AdminProducts: React.FC = () => {
     const { data: { publicUrl } } = supabase.storage
       .from('product-images')
       .getPublicUrl(filePath);
+
+    // Show compression success toast
+    toast({ 
+      title: "تم الضغط", 
+      description: `تم ضغط الصورة بنسبة ${compressionRatio}%`,
+    });
 
     return publicUrl;
   };
