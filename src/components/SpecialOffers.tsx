@@ -1,4 +1,4 @@
-import React, { useState, useRef, memo } from 'react';
+import React, { useState, useRef, memo, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronLeft, ChevronRight, Flame, Percent } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,6 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery } from '@tanstack/react-query';
-import OptimizedImage from '@/components/OptimizedImage';
 
 interface Product {
   id: string;
@@ -21,6 +20,17 @@ interface Product {
   in_stock?: boolean | null;
 }
 
+// Optimized image URL generator
+const getOptimizedImageUrl = (src: string): string => {
+  if (!src) return '/placeholder.svg';
+  const pattern = /\/storage\/v1\/object\/public\//;
+  if (pattern.test(src)) {
+    return src.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + 
+      '?width=220&height=220&quality=70&resize=contain';
+  }
+  return src;
+};
+
 const OfferCard = memo(({ product, isInCart, onAddToCart }: { 
   product: Product; 
   isInCart: boolean;
@@ -31,20 +41,29 @@ const OfferCard = memo(({ product, isInCart, onAddToCart }: {
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
 
+  const optimizedSrc = getOptimizedImageUrl(product.image || '');
+
   return (
     <Link
       to={`/product/${product.id}`}
       className="flex-shrink-0 w-[160px] md:w-[220px] group"
     >
-      <div className="bg-card rounded-xl md:rounded-2xl overflow-hidden border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+      <div className="bg-card rounded-xl md:rounded-2xl overflow-hidden border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-200">
         {/* Image */}
         <div className="relative aspect-square overflow-hidden bg-muted">
-          <OptimizedImage
-            src={product.image || '/placeholder.svg'}
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-muted" />
+          )}
+          <img
+            src={optimizedSrc}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            containerClassName="w-full h-full"
+            loading="lazy"
+            decoding="async"
             onLoad={() => setImageLoaded(true)}
+            className={cn(
+              "w-full h-full object-cover group-hover:scale-105 transition-transform duration-200",
+              imageLoaded ? "opacity-100" : "opacity-0"
+            )}
           />
           
           {/* Discount Badge */}
@@ -119,10 +138,10 @@ const SpecialOffers: React.FC = () => {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
-  const scroll = (direction: 'left' | 'right') => {
+  const scroll = useCallback((direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const scrollAmount = 280;
       scrollRef.current.scrollBy({
@@ -130,9 +149,9 @@ const SpecialOffers: React.FC = () => {
         behavior: 'smooth'
       });
     }
-  };
+  }, []);
 
-  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+  const handleAddToCart = useCallback((e: React.MouseEvent, product: Product) => {
     e.preventDefault();
     e.stopPropagation();
     addToCart({
@@ -146,7 +165,7 @@ const SpecialOffers: React.FC = () => {
       title: "تمت الإضافة للسلة",
       description: `تم إضافة ${product.name} إلى سلة التسوق`,
     });
-  };
+  }, [addToCart, toast]);
 
   if (isLoading) {
     return (

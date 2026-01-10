@@ -8,6 +8,7 @@ interface OptimizedImageProps {
   containerClassName?: string;
   onLoad?: () => void;
   size?: 'thumbnail' | 'medium' | 'large' | 'original';
+  priority?: boolean; // For above-the-fold images
 }
 
 // Supabase Storage URL with transformations
@@ -46,15 +47,19 @@ const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
   className,
   containerClassName,
   onLoad,
-  size = 'medium'
+  size = 'medium',
+  priority = false
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(false);
+  const [isInView, setIsInView] = useState(priority); // Priority images start as in-view
   const [hasError, setHasError] = useState(false);
   const [currentSrc, setCurrentSrc] = useState<string>('');
   const imgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Skip intersection observer for priority images
+    if (priority) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -65,7 +70,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
         });
       },
       {
-        rootMargin: '100px',
+        rootMargin: '200px', // Increased for earlier loading
         threshold: 0.01,
       }
     );
@@ -75,7 +80,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [priority]);
 
   // Update optimized URL when src or size changes
   useEffect(() => {
@@ -103,7 +108,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
     <div ref={imgRef} className={cn("relative", containerClassName)}>
       {/* Skeleton placeholder */}
       {!isLoaded && (
-        <div className="absolute inset-0 bg-muted animate-pulse rounded-inherit" />
+        <div className="absolute inset-0 bg-muted rounded-inherit" />
       )}
       
       {/* Actual image - only render when in view */}
@@ -111,12 +116,13 @@ const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
         <img
           src={hasError ? '/placeholder.svg' : currentSrc}
           alt={alt}
-          loading="lazy"
-          decoding="async"
+          loading={priority ? 'eager' : 'lazy'}
+          decoding={priority ? 'sync' : 'async'}
+          fetchPriority={priority ? 'high' : 'auto'}
           onLoad={handleLoad}
           onError={handleError}
           className={cn(
-            "transition-opacity duration-300",
+            "transition-opacity duration-200",
             isLoaded ? "opacity-100" : "opacity-0",
             className
           )}
