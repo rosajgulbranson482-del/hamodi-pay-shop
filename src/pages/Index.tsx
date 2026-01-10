@@ -1,19 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import Header from '@/components/Header';
-import Hero from '@/components/Hero';
-import FloatingWhatsApp from '@/components/FloatingWhatsApp';
-import SpecialOffers from '@/components/SpecialOffers';
-import ProductGrid from '@/components/ProductGrid';
-import CartDrawer from '@/components/CartDrawer';
-import CheckoutModal from '@/components/CheckoutModal';
-import Footer from '@/components/Footer';
-
+import HeroOptimized from '@/components/HeroOptimized';
 import { CartProvider } from '@/context/CartContext';
+import { preloadDeferredData } from '@/hooks/useDeferredData';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy load components that are below the fold or heavy
+const SpecialOffers = lazy(() => import('@/components/SpecialOffers'));
+const ProductGrid = lazy(() => import('@/components/ProductGrid'));
+const Footer = lazy(() => import('@/components/Footer'));
+const FloatingWhatsApp = lazy(() => import('@/components/FloatingWhatsApp'));
+const CartDrawer = lazy(() => import('@/components/CartDrawer'));
+const CheckoutModal = lazy(() => import('@/components/CheckoutModal'));
+
+// Skeleton fallback for lazy sections
+const SectionSkeleton = () => (
+  <div className="py-6 md:py-10 px-4">
+    <div className="container mx-auto">
+      <Skeleton className="h-8 w-40 mb-4" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="aspect-square rounded-xl" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 const IndexContent: React.FC = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+  // Preload deferred data early
+  useEffect(() => {
+    preloadDeferredData();
+  }, []);
 
   const handleCheckout = () => {
     setIsCartOpen(false);
@@ -36,23 +58,39 @@ const IndexContent: React.FC = () => {
         <Header onCartClick={() => setIsCartOpen(true)} />
         
         <main className="flex-1">
-          <Hero />
-          <SpecialOffers />
-          <ProductGrid />
+          <HeroOptimized />
+          
+          <Suspense fallback={<SectionSkeleton />}>
+            <SpecialOffers />
+          </Suspense>
+          
+          <Suspense fallback={<SectionSkeleton />}>
+            <ProductGrid />
+          </Suspense>
         </main>
 
-        <Footer />
-        <FloatingWhatsApp />
-        <CartDrawer
-          isOpen={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
-          onCheckout={handleCheckout}
-        />
+        <Suspense fallback={null}>
+          <Footer />
+        </Suspense>
+        
+        <Suspense fallback={null}>
+          <FloatingWhatsApp />
+        </Suspense>
+        
+        <Suspense fallback={null}>
+          <CartDrawer
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            onCheckout={handleCheckout}
+          />
+        </Suspense>
 
-        <CheckoutModal
-          isOpen={isCheckoutOpen}
-          onClose={() => setIsCheckoutOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <CheckoutModal
+            isOpen={isCheckoutOpen}
+            onClose={() => setIsCheckoutOpen(false)}
+          />
+        </Suspense>
       </div>
     </>
   );

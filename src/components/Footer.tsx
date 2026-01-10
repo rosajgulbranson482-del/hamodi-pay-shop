@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Zap, Phone, MapPin, Clock } from 'lucide-react';
 
-const Footer: React.FC = () => {
+const Footer: React.FC = memo(() => {
   return (
     <footer id="contact" className="gradient-hero text-primary-foreground py-8 md:py-12">
       <div className="container mx-auto px-4">
@@ -76,6 +76,8 @@ const Footer: React.FC = () => {
       </div>
     </footer>
   );
-};
+});
+
+Footer.displayName = 'Footer';
 
 export default Footer;
