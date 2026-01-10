@@ -689,39 +689,6 @@ ${orderItemsText}
                       ))}
                     </div>
 
-                    {/* Cash on Delivery Warning */}
-                    {formData.paymentMethod === 'cash_on_delivery' && (
-                      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl">
-                        <div className="flex items-start gap-3">
-                          <span className="text-2xl">⚠️</span>
-                          <div className="space-y-2">
-                            <p className="font-bold text-amber-800 dark:text-amber-200">
-                              تنبيه هام - مصاريف الشحن مقدماً
-                            </p>
-                            <p className="text-sm text-amber-700 dark:text-amber-300">
-                              في حالة اختيار <strong>الدفع كاش عند الاستلام</strong>، يجب تحويل مصاريف الشحن مقدماً 
-                              <strong className="text-primary mx-1">({deliveryFee} ج.م)</strong>
-                              عبر فودافون كاش أو انستا باي على الرقم:
-                            </p>
-                            <div className="flex items-center gap-2 bg-white dark:bg-background/50 p-2 rounded-lg">
-                              <span className="font-bold text-lg tracking-wider" dir="ltr">{PAYMENT_NUMBER}</span>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={copyPaymentNumber}
-                                className="mr-auto"
-                              >
-                                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                                {copied ? 'تم' : 'نسخ'}
-                              </Button>
-                            </div>
-                            <p className="text-xs text-amber-600 dark:text-amber-400">
-                              📌 سيتم التواصل معك لتأكيد استلام مصاريف الشحن قبل إرسال الطلب
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Coupon Suggestion */}
