@@ -19,7 +19,7 @@ const MyOrders = lazy(() => import("./pages/MyOrders"));
 const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 const Favorites = lazy(() => import("./pages/Favorites"));
 const Checkout = lazy(() => import("./pages/Checkout"));
-
+const VisitorTracker = lazy(() => import("./components/VisitorTracker"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -45,19 +45,21 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/product/:id" element={<ProductDetails />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/auth" element={<CustomerAuth />} />
-                <Route path="/login" element={<CustomerAuth />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/track" element={<TrackOrder />} />
-                <Route path="/my-orders" element={<MyOrders />} />
-                <Route path="/account" element={<AccountSettings />} />
-                <Route path="/favorites" element={<Favorites />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <VisitorTracker>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/product/:id" element={<ProductDetails />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/auth" element={<CustomerAuth />} />
+                  <Route path="/login" element={<CustomerAuth />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/track" element={<TrackOrder />} />
+                  <Route path="/my-orders" element={<MyOrders />} />
+                  <Route path="/account" element={<AccountSettings />} />
+                  <Route path="/favorites" element={<Favorites />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </VisitorTracker>
             </Suspense>
           </BrowserRouter>
         </TooltipProvider>
