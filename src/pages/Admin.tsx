@@ -6,7 +6,7 @@ import { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Zap, LogOut, Package, ShoppingBag, Bell, Loader2, Ticket, Star, BarChart3, MapPin, BellRing } from 'lucide-react';
+import { Zap, LogOut, Package, ShoppingBag, Bell, Loader2, Ticket, Star, BarChart3, MapPin, BellRing, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -18,6 +18,7 @@ const AdminReviews = lazy(() => import('@/components/admin/AdminReviews'));
 const AdminStats = lazy(() => import('@/components/admin/AdminStats'));
 const AdminDeliveryAreas = lazy(() => import('@/components/admin/AdminDeliveryAreas'));
 const AdminStockNotifications = lazy(() => import('@/components/admin/AdminStockNotifications'));
+const AdminVisitors = lazy(() => import('@/components/admin/AdminVisitors'));
 
 // Loading fallback component
 const TabLoadingFallback = () => (
@@ -241,10 +242,14 @@ const Admin: React.FC = () => {
       {/* Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 md:space-y-6">
-          <TabsList className="grid w-full max-w-5xl grid-cols-7 h-auto p-1">
+          <TabsList className="grid w-full max-w-6xl grid-cols-8 h-auto p-1">
             <TabsTrigger value="stats" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">الإحصائيات</span>
+            </TabsTrigger>
+            <TabsTrigger value="visitors" className="flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">الزوار</span>
             </TabsTrigger>
             <TabsTrigger value="orders" className="relative flex-col md:flex-row gap-1 md:gap-2 py-2 md:py-1.5 text-xs md:text-sm">
               <ShoppingBag className="w-4 h-4" />
@@ -280,6 +285,10 @@ const Admin: React.FC = () => {
           <Suspense fallback={<TabLoadingFallback />}>
             <TabsContent value="stats">
               {activeTab === 'stats' && <AdminStats />}
+            </TabsContent>
+
+            <TabsContent value="visitors">
+              {activeTab === 'visitors' && <AdminVisitors />}
             </TabsContent>
 
             <TabsContent value="orders">

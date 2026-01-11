@@ -356,6 +356,53 @@ export type Database = {
         }
         Relationships: []
       }
+      page_views: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string | null
+          id: string
+          page_path: string
+          product_id: string | null
+          referrer: string | null
+          session_id: string
+          time_spent_seconds: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          page_path: string
+          product_id?: string | null
+          referrer?: string | null
+          session_id: string
+          time_spent_seconds?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          page_path?: string
+          product_id?: string | null
+          referrer?: string | null
+          session_id?: string
+          time_spent_seconds?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_views_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_images: {
         Row: {
           created_at: string
@@ -607,6 +654,7 @@ export type Database = {
         Returns: undefined
       }
       cleanup_old_coupon_attempts: { Args: never; Returns: undefined }
+      cleanup_old_page_views: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
