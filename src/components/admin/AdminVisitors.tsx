@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Globe, Clock, Eye, TrendingUp, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, Globe, Clock, Eye, TrendingUp, MapPin, Trash2 } from 'lucide-react';
 import { 
   BarChart, 
   Bar, 
@@ -19,6 +20,18 @@ import {
   Area
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface PageView {
   id: string;
@@ -40,6 +53,30 @@ interface Product {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 const AdminVisitors: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Delete all page views
+  const handleDeleteAllViews = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('page_views')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['admin-page-views'] });
+      toast.success('تم حذف جميع سجلات الزوار بنجاح');
+    } catch (error) {
+      console.error('Error deleting page views:', error);
+      toast.error('حدث خطأ أثناء حذف السجلات');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Fetch page views
   const { data: pageViews, isLoading: loadingViews } = useQuery({
     queryKey: ['admin-page-views'],
@@ -224,6 +261,40 @@ const AdminVisitors: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header with Delete Button */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold">إحصائيات الزوار</h2>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              disabled={isDeleting || !pageViews?.length}
+            >
+              <Trash2 className="w-4 h-4 ml-2" />
+              حذف جميع السجلات
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                سيتم حذف جميع سجلات الزوار والإحصائيات نهائياً. هذا الإجراء لا يمكن التراجع عنه.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2">
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteAllViews}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting ? 'جاري الحذف...' : 'حذف الكل'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-900">
