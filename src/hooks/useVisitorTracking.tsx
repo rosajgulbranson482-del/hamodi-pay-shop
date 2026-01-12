@@ -2,84 +2,68 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
-// Generate or get session ID
+// Get or create session ID - lightweight
 const getSessionId = (): string => {
   let sessionId = sessionStorage.getItem('visitor_session_id');
   if (!sessionId) {
-    sessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     sessionStorage.setItem('visitor_session_id', sessionId);
   }
   return sessionId;
 };
 
-// Get geolocation from IP using free API
-const getGeoLocation = async (): Promise<{ country: string; city: string } | null> => {
-  try {
-    const cached = sessionStorage.getItem('visitor_geo');
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    const response = await fetch('https://ipapi.co/json/', { 
-      signal: AbortSignal.timeout(5000) 
-    });
-    
-    if (!response.ok) return null;
-    
-    const data = await response.json();
-    const geo = {
-      country: data.country_name || 'Unknown',
-      city: data.city || 'Unknown'
-    };
-    
-    sessionStorage.setItem('visitor_geo', JSON.stringify(geo));
-    return geo;
-  } catch {
-    return null;
+// Lightweight geo lookup - cached
+let geoCache: { country: string; city: string } | null = null;
+const getGeoLocation = async () => {
+  if (geoCache) return geoCache;
+  
+  const cached = sessionStorage.getItem('visitor_geo');
+  if (cached) {
+    geoCache = JSON.parse(cached);
+    return geoCache;
   }
+  
+  try {
+    const response = await fetch('https://ipapi.co/json/', { 
+      signal: AbortSignal.timeout(3000) // 3s timeout
+    });
+    if (response.ok) {
+      const data = await response.json();
+      geoCache = { country: data.country_name || 'Unknown', city: data.city || 'Unknown' };
+      sessionStorage.setItem('visitor_geo', JSON.stringify(geoCache));
+      return geoCache;
+    }
+  } catch {
+    // Silently fail
+  }
+  return null;
 };
 
 // Extract product ID from path
 const extractProductId = (path: string): string | null => {
-  const match = path.match(/\/product\/([a-f0-9-]+)/i);
+  const match = path.match(/^\/product\/([a-zA-Z0-9-]+)/);
   return match ? match[1] : null;
 };
 
 export const useVisitorTracking = () => {
   const location = useLocation();
   const startTimeRef = useRef<number>(Date.now());
-  const lastPathRef = useRef<string>(location.pathname);
-  const isTrackingRef = useRef<boolean>(false);
+  const lastPathRef = useRef<string>('');
 
   useEffect(() => {
+    const currentPath = location.pathname;
+    
+    // Skip if same path
+    if (currentPath === lastPathRef.current) return;
+    lastPathRef.current = currentPath;
+    startTimeRef.current = Date.now();
+
+    // Defer tracking to not block main thread
     const trackPageView = async () => {
-      if (isTrackingRef.current) return;
-      isTrackingRef.current = true;
-
       const sessionId = getSessionId();
-      const currentPath = location.pathname;
       const productId = extractProductId(currentPath);
-
-      // Calculate time spent on previous page
-      const timeSpent = Math.floor((Date.now() - startTimeRef.current) / 1000);
-      
-      // Update time spent for previous page if exists
-      if (lastPathRef.current !== currentPath && timeSpent > 0) {
-        try {
-          // We can't update anonymous inserts, so we track time with the new view
-        } catch (e) {
-          console.log('Time tracking skipped');
-        }
-      }
-
-      // Reset timer for new page
-      startTimeRef.current = Date.now();
-      lastPathRef.current = currentPath;
-
-      // Get geolocation
       const geo = await getGeoLocation();
 
-      // Insert page view
       try {
         await supabase.from('page_views').insert({
           session_id: sessionId,
@@ -89,43 +73,41 @@ export const useVisitorTracking = () => {
           city: geo?.city || null,
           user_agent: navigator.userAgent,
           referrer: document.referrer || null,
-          time_spent_seconds: 0
         });
-      } catch (e) {
-        console.log('Page view tracking failed:', e);
+      } catch {
+        // Silently fail
       }
-
-      isTrackingRef.current = false;
     };
 
     // Use requestIdleCallback for non-blocking tracking
     if ('requestIdleCallback' in window) {
-      (window as Window & { requestIdleCallback: (callback: () => void) => number }).requestIdleCallback(() => trackPageView());
+      requestIdleCallback(() => trackPageView(), { timeout: 5000 });
     } else {
-      setTimeout(trackPageView, 100);
+      setTimeout(trackPageView, 1000);
     }
   }, [location.pathname]);
 
-  // Track time spent when user leaves
+  // Track time spent on page exit - using sendBeacon for reliability
   useEffect(() => {
-    const handleBeforeUnload = async () => {
-      const sessionId = getSessionId();
-      const timeSpent = Math.floor((Date.now() - startTimeRef.current) / 1000);
+    const handleUnload = () => {
+      const timeSpent = Math.round((Date.now() - startTimeRef.current) / 1000);
       
-      // Use sendBeacon for reliable tracking on page exit
-      const data = JSON.stringify({
-        session_id: sessionId,
-        page_path: location.pathname,
-        time_spent_seconds: timeSpent
-      });
-      
-      navigator.sendBeacon?.(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/page_views?on_conflict=session_id,page_path`,
-        data
-      );
+      if (timeSpent > 0 && timeSpent < 3600) { // Max 1 hour
+        const sessionId = getSessionId();
+        const data = JSON.stringify({
+          session_id: sessionId,
+          page_path: location.pathname,
+          time_spent_seconds: timeSpent,
+        });
+        
+        navigator.sendBeacon(
+          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/update_time_spent`,
+          new Blob([data], { type: 'application/json' })
+        );
+      }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
   }, [location.pathname]);
 };
