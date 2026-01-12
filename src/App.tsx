@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 // Lazy load pages for code splitting
@@ -19,12 +19,12 @@ const MyOrders = lazy(() => import("./pages/MyOrders"));
 const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 const Favorites = lazy(() => import("./pages/Favorites"));
 const Checkout = lazy(() => import("./pages/Checkout"));
-const VisitorTracker = lazy(() => import("./components/VisitorTracker"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (previously cacheTime)
+      gcTime: 10 * 60 * 1000, // 10 minutes
     },
   },
 });
@@ -36,6 +36,26 @@ const PageLoader = () => (
   </div>
 );
 
+// Deferred visitor tracking - loads after initial paint
+const DeferredVisitorTracker = () => {
+  useEffect(() => {
+    // Use requestIdleCallback to load tracker after page is interactive
+    const loadTracker = () => {
+      import("./hooks/useVisitorTracking").then(({ useVisitorTracking }) => {
+        // Hook is imported, component will use it
+      });
+    };
+
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(loadTracker, { timeout: 2000 });
+    } else {
+      setTimeout(loadTracker, 1000);
+    }
+  }, []);
+  
+  return null;
+};
+
 const App = () => (
   <HelmetProvider>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -45,22 +65,21 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
-              <VisitorTracker>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/product/:id" element={<ProductDetails />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/auth" element={<CustomerAuth />} />
-                  <Route path="/login" element={<CustomerAuth />} />
-                  <Route path="/admin" element={<Admin />} />
-                  <Route path="/track" element={<TrackOrder />} />
-                  <Route path="/my-orders" element={<MyOrders />} />
-                  <Route path="/account" element={<AccountSettings />} />
-                  <Route path="/favorites" element={<Favorites />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </VisitorTracker>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/product/:id" element={<ProductDetails />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/auth" element={<CustomerAuth />} />
+                <Route path="/login" element={<CustomerAuth />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/track" element={<TrackOrder />} />
+                <Route path="/my-orders" element={<MyOrders />} />
+                <Route path="/account" element={<AccountSettings />} />
+                <Route path="/favorites" element={<Favorites />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
             </Suspense>
+            <DeferredVisitorTracker />
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>

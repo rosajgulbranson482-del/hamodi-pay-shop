@@ -1,12 +1,11 @@
 import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import Header from '@/components/Header';
+import HeaderOptimized from '@/components/HeaderOptimized';
 import HeroOptimized from '@/components/HeroOptimized';
 import { CartProvider } from '@/context/CartContext';
-import { preloadDeferredData } from '@/hooks/useDeferredData';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Lazy load components that are below the fold or heavy
+// Lazy load components that are below the fold
 const SpecialOffers = lazy(() => import('@/components/SpecialOffers'));
 const ProductGrid = lazy(() => import('@/components/ProductGrid'));
 const Footer = lazy(() => import('@/components/Footer'));
@@ -32,9 +31,31 @@ const IndexContent: React.FC = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-  // Preload deferred data early
+  // Deferred data preloading - after initial paint
   useEffect(() => {
-    preloadDeferredData();
+    const preload = async () => {
+      const { preloadDeferredData } = await import('@/hooks/useDeferredData');
+      preloadDeferredData();
+    };
+    
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => preload());
+    } else {
+      setTimeout(preload, 100);
+    }
+  }, []);
+
+  // Deferred visitor tracking - after everything else
+  useEffect(() => {
+    const trackVisitor = async () => {
+      const { useVisitorTracking } = await import('@/hooks/useVisitorTracking');
+    };
+    
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => trackVisitor(), { timeout: 3000 });
+    } else {
+      setTimeout(trackVisitor, 2000);
+    }
   }, []);
 
   const handleCheckout = () => {
@@ -55,7 +76,7 @@ const IndexContent: React.FC = () => {
       </Helmet>
 
       <div className="min-h-screen flex flex-col">
-        <Header onCartClick={() => setIsCartOpen(true)} />
+        <HeaderOptimized onCartClick={() => setIsCartOpen(true)} />
         
         <main className="flex-1">
           <HeroOptimized />
@@ -77,20 +98,24 @@ const IndexContent: React.FC = () => {
           <FloatingWhatsApp />
         </Suspense>
         
-        <Suspense fallback={null}>
-          <CartDrawer
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-            onCheckout={handleCheckout}
-          />
-        </Suspense>
+        {isCartOpen && (
+          <Suspense fallback={null}>
+            <CartDrawer
+              isOpen={isCartOpen}
+              onClose={() => setIsCartOpen(false)}
+              onCheckout={handleCheckout}
+            />
+          </Suspense>
+        )}
 
-        <Suspense fallback={null}>
-          <CheckoutModal
-            isOpen={isCheckoutOpen}
-            onClose={() => setIsCheckoutOpen(false)}
-          />
-        </Suspense>
+        {isCheckoutOpen && (
+          <Suspense fallback={null}>
+            <CheckoutModal
+              isOpen={isCheckoutOpen}
+              onClose={() => setIsCheckoutOpen(false)}
+            />
+          </Suspense>
+        )}
       </div>
     </>
   );
