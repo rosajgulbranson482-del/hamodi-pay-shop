@@ -1,29 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- الصفحة الرئيسية -->
   <url>
     <loc>https://hamoudi-store.lovable.app/</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-13</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="ar" href="https://hamoudi-store.lovable.app/"/>
   </url>
+  
+  <!-- صفحة تتبع الطلب -->
   <url>
     <loc>https://hamoudi-store.lovable.app/track</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+  
+  <!-- صفحة تسجيل الدخول -->
   <url>
     <loc>https://hamoudi-store.lovable.app/auth</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
+  
+  <!-- صفحة المفضلة -->
   <url>
     <loc>https://hamoudi-store.lovable.app/favorites</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
+  
+  <!-- صفحة طلباتي -->
+  <url>
+    <loc>https://hamoudi-store.lovable.app/my-orders</loc>
+    <lastmod>2026-01-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- صفحة إتمام الطلب -->
+  <url>
+    <loc>https://hamoudi-store.lovable.app/checkout</loc>
+    <lastmod>2026-01-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- صفحة إعدادات الحساب -->
+  <url>
+    <loc>https://hamoudi-store.lovable.app/account</loc>
+    <lastmod>2026-01-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
 </urlset>

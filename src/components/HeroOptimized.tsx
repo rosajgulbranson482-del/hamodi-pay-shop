@@ -38,7 +38,7 @@ const HeroOptimized: React.FC = memo(() => {
             <h1 className="text-3xl md:text-6xl font-bold mb-4 md:mb-6">
               مرحباً بك في
               <br />
-              <span className="text-gradient">حمودي ستور</span>
+              <span className="text-gradient" role="text" aria-label="حمودي ستور - أفضل متجر إلكتروني في مصر">حمودي ستور</span>
             </h1>
 
             {/* Promo Banner - Lazy loaded */}
