@@ -215,7 +215,18 @@ const ProductDetailsContent = () => {
     setIsCartOpen(true);
   };
 
-  const productUrl = `https://hamoudi-store.lovable.app/product/${product.id}`;
+  // Generate SEO-friendly slug from product name
+  const generateSlug = (name: string) => {
+    return name
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\u0600-\u06FF\w-]/g, '') // Keep Arabic, alphanumeric, and hyphens
+      .toLowerCase();
+  };
+  
+  const productSlug = generateSlug(product.name);
+  // Use clean canonical URL with product slug for better SEO
+  const productUrl = `https://hamoudi-store.lovable.app/product/${product.id}/${productSlug}`;
   const productImage = product.image || 'https://hamoudi-store.lovable.app/placeholder.svg';
   
   // JSON-LD Schema for Product
