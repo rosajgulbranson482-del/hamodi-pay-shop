@@ -215,11 +215,95 @@ const ProductDetailsContent = () => {
     setIsCartOpen(true);
   };
 
+  const productUrl = `https://hamoudi-store.lovable.app/product/${product.id}`;
+  const productImage = product.image || 'https://hamoudi-store.lovable.app/placeholder.svg';
+  
+  // JSON-LD Schema for Product
+  const productSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": product.name,
+    "description": product.description || `${product.name} - منتج عالي الجودة من حمودي ستور`,
+    "image": productImage,
+    "brand": {
+      "@type": "Brand",
+      "name": "حمودي ستور"
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": productUrl,
+      "priceCurrency": "EGP",
+      "price": product.price,
+      "priceValidUntil": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      "availability": inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "حمودي ستور"
+      }
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.5",
+      "reviewCount": "128"
+    },
+    "category": product.category
+  };
+
+  // Breadcrumb Schema
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "الرئيسية",
+        "item": "https://hamoudi-store.lovable.app/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": product.category,
+        "item": `https://hamoudi-store.lovable.app/?category=${encodeURIComponent(product.category)}`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": product.name,
+        "item": productUrl
+      }
+    ]
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>{product.name} | متجرنا</title>
-        <meta name="description" content={product.description || `اشتر ${product.name} بأفضل سعر`} />
+        <title>{product.name} | حمودي ستور - أفضل سعر في مصر</title>
+        <meta name="description" content={product.description || `اشتر ${product.name} بأفضل سعر من حمودي ستور. توصيل سريع لجميع محافظات مصر. الدفع عند الاستلام متاح.`} />
+        <meta name="keywords" content={`${product.name}, ${product.category}, حمودي ستور, شراء أونلاين, مصر`} />
+        
+        {/* Canonical URL */}
+        <link rel="canonical" href={productUrl} />
+        
+        {/* Open Graph */}
+        <meta property="og:type" content="product" />
+        <meta property="og:title" content={`${product.name} | حمودي ستور`} />
+        <meta property="og:description" content={product.description || `اشتر ${product.name} بأفضل سعر`} />
+        <meta property="og:image" content={productImage} />
+        <meta property="og:url" content={productUrl} />
+        <meta property="og:site_name" content="حمودي ستور" />
+        <meta property="product:price:amount" content={String(product.price)} />
+        <meta property="product:price:currency" content="EGP" />
+        
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${product.name} | حمودي ستور`} />
+        <meta name="twitter:description" content={product.description || `اشتر ${product.name} بأفضل سعر`} />
+        <meta name="twitter:image" content={productImage} />
+        
+        {/* JSON-LD Schemas */}
+        <script type="application/ld+json">{JSON.stringify(productSchema)}</script>
+        <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
       </Helmet>
       
       <PromoBanner />

@@ -102,13 +102,22 @@
     }
     </script>
     
-    <!-- Google Analytics - Loaded async for performance -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-XXXXXXXXXX');
+    <!-- Organization Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "حمودي ستور",
+      "alternateName": "Hamoudi Store",
+      "url": "https://hamoudi-store.lovable.app",
+      "logo": "https://storage.googleapis.com/gpt-engineer-file-uploads/U4xlV2cEJLQjSe7FH3aIllOtGej2/social-images/social-1767258896032-WhatsApp Image 2026-01-01 at 11.14.18 AM.jpeg",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "availableLanguage": ["Arabic", "English"]
+      },
+      "sameAs": []
+    }
     </script>
     
     <!-- Critical CSS for faster First Paint -->

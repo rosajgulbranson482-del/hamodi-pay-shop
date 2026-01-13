@@ -81,7 +81,7 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
       <Link to={`/product/${product.id}`} className="block relative aspect-square overflow-hidden bg-muted">
         <OptimizedImage
           src={product.image || '/placeholder.svg'}
-          alt={product.name}
+          alt={`${product.name} - ${product.category} من حمودي ستور - سعر ${product.price} جنيه مصري`}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           containerClassName="w-full h-full"
           onLoad={() => setImageLoaded(true)}
