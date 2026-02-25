@@ -20,6 +20,7 @@ const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 const Favorites = lazy(() => import("./pages/Favorites"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Category = lazy(() => import("./pages/Category"));
+const Search = lazy(() => import("./pages/Search"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -78,6 +79,7 @@ const App = () => (
                 <Route path="/my-orders" element={<MyOrders />} />
                 <Route path="/account" element={<AccountSettings />} />
                 <Route path="/favorites" element={<Favorites />} />
+                <Route path="/search" element={<Search />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
