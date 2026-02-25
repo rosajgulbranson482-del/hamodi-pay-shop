@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      backend_logs: {
+        Row: {
+          created_at: string
+          details: string | null
+          execution_time_ms: number | null
+          function_name: string
+          id: string
+          ip_address: string | null
+          log_type: string
+          message: string
+          status_code: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          execution_time_ms?: number | null
+          function_name: string
+          id?: string
+          ip_address?: string | null
+          log_type?: string
+          message: string
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          execution_time_ms?: number | null
+          function_name?: string
+          id?: string
+          ip_address?: string | null
+          log_type?: string
+          message?: string
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           created_at: string
