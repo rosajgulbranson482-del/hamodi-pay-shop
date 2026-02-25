@@ -3,7 +3,7 @@ import { Search, X, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface Product {
   id: string;
@@ -22,6 +22,7 @@ const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!query.trim()) {
@@ -63,24 +64,33 @@ const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) => {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="relative">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="اكتب اسم المنتج..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pr-10"
-            autoFocus
-          />
-          {query && (
-            <button
-              onClick={() => setQuery('')}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (query.trim()) {
+            navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+            handleClose();
+          }
+        }}>
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="اكتب اسم المنتج..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pr-10"
+              autoFocus
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </form>
 
         <div className="max-h-[400px] overflow-y-auto">
           {loading ? (
@@ -114,6 +124,15 @@ const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) => {
                   <span className="font-bold text-primary">{product.price} ج.م</span>
                 </Link>
               ))}
+              <button
+                onClick={() => {
+                  navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+                  handleClose();
+                }}
+                className="w-full text-center py-3 text-sm text-primary font-medium hover:bg-accent rounded-lg transition-colors"
+              >
+                عرض كل النتائج ←
+              </button>
             </div>
           ) : query.trim() ? (
             <div className="text-center py-8 text-muted-foreground">
