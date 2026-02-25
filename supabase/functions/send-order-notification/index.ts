@@ -38,6 +38,36 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Admin authentication check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'غير مصرح' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'غير مصرح' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const userId = claimsData.claims.sub;
+    const { data: isAdmin } = await authClient.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: 'غير مسموح - أدمن فقط' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     const { orderId, newStatus, customerEmail }: NotificationRequest = await req.json();
 
     console.log(`Sending notification for order ${orderId}, new status: ${newStatus}, to: ${customerEmail}`);
