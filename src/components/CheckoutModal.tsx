@@ -102,6 +102,21 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [freeDeliveryEnabled, setFreeDeliveryEnabled] = useState(false);
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(0);
 
+  // Saved addresses
+  interface SavedAddress {
+    id: string;
+    label: string;
+    recipient_name: string;
+    phone: string;
+    governorate: string;
+    area: string | null;
+    address: string;
+    is_default: boolean;
+  }
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+  const [useNewAddress, setUseNewAddress] = useState(false);
+
   // Fetch governorates and delivery areas from database
   useEffect(() => {
     const fetchDeliveryData = async () => {
