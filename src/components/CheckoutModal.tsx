@@ -200,6 +200,48 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     }
   }, [isAuthenticated, profile]);
 
+  // Load saved addresses when modal opens
+  useEffect(() => {
+    const loadSavedAddresses = async () => {
+      if (!isOpen || !user?.id) return;
+      const { data } = await supabase
+        .from('customer_addresses')
+        .select('id,label,recipient_name,phone,governorate,area,address,is_default')
+        .eq('user_id', user.id)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (data && data.length > 0) {
+        setSavedAddresses(data as SavedAddress[]);
+        const def = data.find((a) => a.is_default) || data[0];
+        setSelectedAddressId(def.id);
+        setUseNewAddress(false);
+      } else {
+        setSavedAddresses([]);
+        setUseNewAddress(true);
+      }
+    };
+    loadSavedAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user?.id]);
+
+  // When a saved address is selected, fill the form fields
+  useEffect(() => {
+    if (useNewAddress || !selectedAddressId) return;
+    const addr = savedAddresses.find((a) => a.id === selectedAddressId);
+    if (!addr) return;
+    const gov = governorates.find((g) => g.name === addr.governorate);
+    const area = addr.area ? deliveryAreas.find((a) => a.name === addr.area && a.governorate_id === gov?.id) : null;
+    setFormData(prev => ({
+      ...prev,
+      name: addr.recipient_name,
+      phone: addr.phone,
+      governorate: gov?.id || '',
+      area: area?.id || '',
+      address: addr.address,
+    }));
+  }, [selectedAddressId, useNewAddress, savedAddresses, governorates, deliveryAreas]);
+
+
   const discountAmount = appliedCoupon?.discount_amount || 0;
   const finalTotal = Math.max(0, totalPrice + deliveryFee - discountAmount);
 
