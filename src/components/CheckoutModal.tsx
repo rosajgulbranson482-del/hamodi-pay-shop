@@ -387,6 +387,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       const areaName = selectedArea?.name || '';
       const addressParts = [areaName, formData.address].filter(Boolean).join(' - ');
       
+      const addressSnapshot = {
+        recipient_name: formData.name,
+        phone: formData.phone,
+        governorate: governorateName,
+        area: areaName || null,
+        address: formData.address,
+        captured_at: new Date().toISOString(),
+      };
+
       const { data, error } = await supabase.functions.invoke('create-order', {
         body: {
           customer_name: formData.name,
@@ -397,6 +406,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
           payment_method: formData.paymentMethod,
           notes: formData.notes || null,
           coupon_code: appliedCoupon?.code || null,
+          address_id: !useNewAddress && selectedAddressId ? selectedAddressId : null,
+          address_snapshot: addressSnapshot,
           items: items.map(item => ({
             product_id: item.id,
             product_name: item.name,
