@@ -102,6 +102,21 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [freeDeliveryEnabled, setFreeDeliveryEnabled] = useState(false);
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(0);
 
+  // Saved addresses
+  interface SavedAddress {
+    id: string;
+    label: string;
+    recipient_name: string;
+    phone: string;
+    governorate: string;
+    area: string | null;
+    address: string;
+    is_default: boolean;
+  }
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+  const [useNewAddress, setUseNewAddress] = useState(false);
+
   // Fetch governorates and delivery areas from database
   useEffect(() => {
     const fetchDeliveryData = async () => {
@@ -184,6 +199,48 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       }));
     }
   }, [isAuthenticated, profile]);
+
+  // Load saved addresses when modal opens
+  useEffect(() => {
+    const loadSavedAddresses = async () => {
+      if (!isOpen || !user?.id) return;
+      const { data } = await supabase
+        .from('customer_addresses')
+        .select('id,label,recipient_name,phone,governorate,area,address,is_default')
+        .eq('user_id', user.id)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (data && data.length > 0) {
+        setSavedAddresses(data as SavedAddress[]);
+        const def = data.find((a) => a.is_default) || data[0];
+        setSelectedAddressId(def.id);
+        setUseNewAddress(false);
+      } else {
+        setSavedAddresses([]);
+        setUseNewAddress(true);
+      }
+    };
+    loadSavedAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user?.id]);
+
+  // When a saved address is selected, fill the form fields
+  useEffect(() => {
+    if (useNewAddress || !selectedAddressId) return;
+    const addr = savedAddresses.find((a) => a.id === selectedAddressId);
+    if (!addr) return;
+    const gov = governorates.find((g) => g.name === addr.governorate);
+    const area = addr.area ? deliveryAreas.find((a) => a.name === addr.area && a.governorate_id === gov?.id) : null;
+    setFormData(prev => ({
+      ...prev,
+      name: addr.recipient_name,
+      phone: addr.phone,
+      governorate: gov?.id || '',
+      area: area?.id || '',
+      address: addr.address,
+    }));
+  }, [selectedAddressId, useNewAddress, savedAddresses, governorates, deliveryAreas]);
+
 
   const discountAmount = appliedCoupon?.discount_amount || 0;
   const finalTotal = Math.max(0, totalPrice + deliveryFee - discountAmount);
@@ -330,6 +387,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       const areaName = selectedArea?.name || '';
       const addressParts = [areaName, formData.address].filter(Boolean).join(' - ');
       
+      const addressSnapshot = {
+        recipient_name: formData.name,
+        phone: formData.phone,
+        governorate: governorateName,
+        area: areaName || null,
+        address: formData.address,
+        captured_at: new Date().toISOString(),
+      };
+
       const { data, error } = await supabase.functions.invoke('create-order', {
         body: {
           customer_name: formData.name,
@@ -340,6 +406,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
           payment_method: formData.paymentMethod,
           notes: formData.notes || null,
           coupon_code: appliedCoupon?.code || null,
+          address_id: !useNewAddress && selectedAddressId ? selectedAddressId : null,
+          address_snapshot: addressSnapshot,
           items: items.map(item => ({
             product_id: item.id,
             product_name: item.name,
@@ -450,6 +518,57 @@ ${orderItemsText}
         <div className="p-3 sm:p-4">
           {step === 1 ? (
             <div className="space-y-4">
+              {/* Saved addresses selector */}
+              {savedAddresses.length > 0 && (
+                <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
+                  <Label className="flex items-center gap-2 text-sm font-semibold">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    اختر عنواناً محفوظاً
+                  </Label>
+                  <div className="space-y-2">
+                    {savedAddresses.map((addr) => (
+                      <button
+                        key={addr.id}
+                        type="button"
+                        onClick={() => { setSelectedAddressId(addr.id); setUseNewAddress(false); }}
+                        className={cn(
+                          "w-full text-right p-2.5 rounded-md border-2 transition-all text-sm",
+                          !useNewAddress && selectedAddressId === addr.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50 bg-card"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold">{addr.label}</span>
+                          {addr.is_default && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground">افتراضي</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {addr.recipient_name} • <span dir="ltr">{addr.phone}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {addr.governorate}{addr.area ? ` - ${addr.area}` : ''} - {addr.address}
+                        </div>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseNewAddress(true);
+                        setSelectedAddressId('');
+                      }}
+                      className={cn(
+                        "w-full text-right p-2.5 rounded-md border-2 border-dashed transition-all text-sm",
+                        useNewAddress ? "border-primary bg-primary/5 text-primary font-bold" : "border-border text-muted-foreground hover:border-primary/50"
+                      )}
+                    >
+                      + استخدم عنواناً جديداً
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Name */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">

@@ -28,6 +28,8 @@ interface CreateOrderRequest {
   discount_amount?: number;
   total: number;
   user_id?: string;
+  address_id?: string | null;
+  address_snapshot?: Record<string, unknown> | null;
 }
 
 // Helper function to log to backend_logs table
@@ -149,6 +151,8 @@ serve(async (req) => {
         discount_amount: body.discount_amount || 0,
         total: body.total,
         user_id: body.user_id || null,
+        address_id: body.address_id || null,
+        address_snapshot: body.address_snapshot || null,
         status: 'pending',
         payment_confirmed: false,
       })

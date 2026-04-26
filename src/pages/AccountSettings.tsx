@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner';
 import { ArrowRight, Loader2, User, MapPin, Phone, Save, Trash2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import AddressManager from '@/components/AddressManager';
 
 // مراكز محافظة الشرقية
 const SHARQIA_CENTERS = [
@@ -243,6 +244,13 @@ const AccountSettings = () => {
               </form>
             </CardContent>
           </Card>
+
+          {/* Address Manager */}
+          {user?.id && (
+            <div className="mt-6">
+              <AddressManager userId={user.id} />
+            </div>
+          )}
 
           {/* Delete Account Card */}
           <Card className="mt-6 border-destructive/50">
