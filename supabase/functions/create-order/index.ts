@@ -28,6 +28,8 @@ interface CreateOrderRequest {
   discount_amount?: number;
   total: number;
   user_id?: string;
+  address_id?: string | null;
+  address_snapshot?: Record<string, unknown> | null;
 }
 
 // Helper function to log to backend_logs table
