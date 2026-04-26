@@ -245,6 +245,13 @@ const AccountSettings = () => {
             </CardContent>
           </Card>
 
+          {/* Address Manager */}
+          {user?.id && (
+            <div className="mt-6">
+              <AddressManager userId={user.id} />
+            </div>
+          )}
+
           {/* Delete Account Card */}
           <Card className="mt-6 border-destructive/50">
             <CardHeader>
