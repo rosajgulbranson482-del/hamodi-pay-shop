@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner';
 import { ArrowRight, Loader2, User, MapPin, Phone, Save, Trash2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import AddressManager from '@/components/AddressManager';
 
 // مراكز محافظة الشرقية
 const SHARQIA_CENTERS = [
