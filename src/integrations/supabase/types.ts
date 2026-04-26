@@ -154,6 +154,48 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_addresses: {
+        Row: {
+          address: string
+          area: string | null
+          created_at: string
+          governorate: string
+          id: string
+          is_default: boolean
+          label: string
+          phone: string
+          recipient_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          area?: string | null
+          created_at?: string
+          governorate: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          phone: string
+          recipient_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          area?: string | null
+          created_at?: string
+          governorate?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          phone?: string
+          recipient_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       delivery_areas: {
         Row: {
           created_at: string
@@ -331,6 +373,8 @@ export type Database = {
       }
       orders: {
         Row: {
+          address_id: string | null
+          address_snapshot: Json | null
           coupon_code: string | null
           created_at: string
           customer_address: string
@@ -352,6 +396,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          address_id?: string | null
+          address_snapshot?: Json | null
           coupon_code?: string | null
           created_at?: string
           customer_address: string
@@ -373,6 +419,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          address_id?: string | null
+          address_snapshot?: Json | null
           coupon_code?: string | null
           created_at?: string
           customer_address?: string
