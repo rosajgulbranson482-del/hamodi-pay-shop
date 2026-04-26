@@ -518,6 +518,57 @@ ${orderItemsText}
         <div className="p-3 sm:p-4">
           {step === 1 ? (
             <div className="space-y-4">
+              {/* Saved addresses selector */}
+              {savedAddresses.length > 0 && (
+                <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
+                  <Label className="flex items-center gap-2 text-sm font-semibold">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    اختر عنواناً محفوظاً
+                  </Label>
+                  <div className="space-y-2">
+                    {savedAddresses.map((addr) => (
+                      <button
+                        key={addr.id}
+                        type="button"
+                        onClick={() => { setSelectedAddressId(addr.id); setUseNewAddress(false); }}
+                        className={cn(
+                          "w-full text-right p-2.5 rounded-md border-2 transition-all text-sm",
+                          !useNewAddress && selectedAddressId === addr.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50 bg-card"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold">{addr.label}</span>
+                          {addr.is_default && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground">افتراضي</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {addr.recipient_name} • <span dir="ltr">{addr.phone}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {addr.governorate}{addr.area ? ` - ${addr.area}` : ''} - {addr.address}
+                        </div>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseNewAddress(true);
+                        setSelectedAddressId('');
+                      }}
+                      className={cn(
+                        "w-full text-right p-2.5 rounded-md border-2 border-dashed transition-all text-sm",
+                        useNewAddress ? "border-primary bg-primary/5 text-primary font-bold" : "border-border text-muted-foreground hover:border-primary/50"
+                      )}
+                    >
+                      + استخدم عنواناً جديداً
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Name */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
