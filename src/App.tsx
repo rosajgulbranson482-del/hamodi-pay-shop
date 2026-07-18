@@ -81,6 +81,7 @@ const App = () => (
                 <Route path="/account" element={<AccountSettings />} />
                 <Route path="/favorites" element={<Favorites />} />
                 <Route path="/search" element={<Search />} />
+                <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
