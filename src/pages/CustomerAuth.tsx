@@ -143,7 +143,7 @@ const CustomerAuth: React.FC = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: safeNext ? `${window.location.origin}${safeNext}` : `${window.location.origin}/`,
           data: {
             full_name: fullName,
             phone: phone,
