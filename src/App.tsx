@@ -21,6 +21,7 @@ const Favorites = lazy(() => import("./pages/Favorites"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Category = lazy(() => import("./pages/Category"));
 const Search = lazy(() => import("./pages/Search"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
