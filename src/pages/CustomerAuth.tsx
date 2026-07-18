@@ -24,6 +24,8 @@ const CustomerAuth: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const redirectTo = searchParams.get('redirect');
+  const nextParam = searchParams.get('next');
+  const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null;
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -43,7 +45,9 @@ const CustomerAuth: React.FC = () => {
           _role: 'admin'
         });
         if (isMounted) {
-          if (isAdmin) {
+          if (safeNext) {
+            window.location.href = safeNext;
+          } else if (isAdmin) {
             navigate('/admin');
           } else if (redirectTo === 'checkout') {
             navigate('/checkout?from=auth');
@@ -54,7 +58,9 @@ const CustomerAuth: React.FC = () => {
       } catch (error) {
         console.error('Error checking role:', error);
         if (isMounted) {
-          if (redirectTo === 'checkout') {
+          if (safeNext) {
+            window.location.href = safeNext;
+          } else if (redirectTo === 'checkout') {
             navigate('/checkout?from=auth');
           } else {
             navigate('/');
@@ -137,7 +143,7 @@ const CustomerAuth: React.FC = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: safeNext ? `${window.location.origin}${safeNext}` : `${window.location.origin}/`,
           data: {
             full_name: fullName,
             phone: phone,

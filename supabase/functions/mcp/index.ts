@@ -3,7 +3,7 @@
 // supabase function: mcp
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
 // src/lib/mcp/index.ts
-import { defineMcp } from "npm:@lovable.dev/mcp-js@0.23.0";
+import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.23.0";
 
 // src/lib/mcp/tools/list-products.ts
 import { createClient } from "npm:@supabase/supabase-js@^2.89.0";
@@ -147,11 +147,16 @@ var list_categories_default = defineTool4({
 });
 
 // src/lib/mcp/index.ts
+var projectRef = "jgybqgblhlmnbstlpape";
 var mcp_default = defineMcp({
   name: "hamoudi-store-mcp",
   title: "\u062D\u0645\u0648\u062F\u064A \u0633\u062A\u0648\u0631 \u2014 Product Catalog",
   version: "0.1.0",
-  instructions: "Public, read-only tools for the Hamoudi Store product catalog. Use `list_categories` to discover categories, `list_products` to browse, `search_products` to find items by keyword (Arabic or English), and `get_product` for full details of one product by UUID. Prices are in EGP. Store info: WhatsApp/Vodafone Cash 01025529130. Delivery across Egypt with Cash-on-Delivery or Vodafone Cash.",
+  instructions: "Read-only tools for the Hamoudi Store product catalog (signed-in users only). Use `list_categories` to discover categories, `list_products` to browse, `search_products` to find items by keyword (Arabic or English), and `get_product` for full details of one product by UUID. Prices are in EGP.",
+  auth: auth.oauth.issuer({
+    issuer: `https://${projectRef}.supabase.co/auth/v1`,
+    acceptedAudiences: "authenticated"
+  }),
   tools: [list_products_default, search_products_default, get_product_default, list_categories_default]
 });
 
