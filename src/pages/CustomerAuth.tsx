@@ -24,6 +24,8 @@ const CustomerAuth: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const redirectTo = searchParams.get('redirect');
+  const nextParam = searchParams.get('next');
+  const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null;
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isSignUp, setIsSignUp] = useState(false);
