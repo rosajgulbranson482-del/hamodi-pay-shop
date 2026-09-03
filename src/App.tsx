@@ -9,7 +9,7 @@ import { Suspense, lazy, useEffect, type ComponentType } from "react";
 import { Loader2 } from "lucide-react";
 
 // Retry dynamic imports once (handles stale chunk hashes after a new deploy)
-const lazyWithRetry = <T extends { default: React.ComponentType<any> }>(
+const lazyWithRetry = <T extends { default: ComponentType<any> }>(
   factory: () => Promise<T>
 ) =>
   lazy(async () => {
