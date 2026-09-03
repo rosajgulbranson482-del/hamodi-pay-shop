@@ -5,23 +5,41 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, type ComponentType } from "react";
 import { Loader2 } from "lucide-react";
 
+// Retry dynamic imports once (handles stale chunk hashes after a new deploy)
+const lazyWithRetry = <T extends { default: ComponentType<any> }>(
+  factory: () => Promise<T>
+) =>
+  lazy(async () => {
+    try {
+      return await factory();
+    } catch (err) {
+      const key = "chunk-reload-" + factory.toString().slice(0, 60);
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+        return new Promise<T>(() => {});
+      }
+      throw err;
+    }
+  });
+
 // Lazy load pages for code splitting
-const Index = lazy(() => import("./pages/Index"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const CustomerAuth = lazy(() => import("./pages/CustomerAuth"));
-const Admin = lazy(() => import("./pages/Admin"));
-const TrackOrder = lazy(() => import("./pages/TrackOrder"));
-const ProductDetails = lazy(() => import("./pages/ProductDetails"));
-const MyOrders = lazy(() => import("./pages/MyOrders"));
-const AccountSettings = lazy(() => import("./pages/AccountSettings"));
-const Favorites = lazy(() => import("./pages/Favorites"));
-const Checkout = lazy(() => import("./pages/Checkout"));
-const Category = lazy(() => import("./pages/Category"));
-const Search = lazy(() => import("./pages/Search"));
-const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
+const Index = lazyWithRetry(() => import("./pages/Index"));
+const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
+const CustomerAuth = lazyWithRetry(() => import("./pages/CustomerAuth"));
+const Admin = lazyWithRetry(() => import("./pages/Admin"));
+const TrackOrder = lazyWithRetry(() => import("./pages/TrackOrder"));
+const ProductDetails = lazyWithRetry(() => import("./pages/ProductDetails"));
+const MyOrders = lazyWithRetry(() => import("./pages/MyOrders"));
+const AccountSettings = lazyWithRetry(() => import("./pages/AccountSettings"));
+const Favorites = lazyWithRetry(() => import("./pages/Favorites"));
+const Checkout = lazyWithRetry(() => import("./pages/Checkout"));
+const Category = lazyWithRetry(() => import("./pages/Category"));
+const Search = lazyWithRetry(() => import("./pages/Search"));
+const OAuthConsent = lazyWithRetry(() => import("./pages/OAuthConsent"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
