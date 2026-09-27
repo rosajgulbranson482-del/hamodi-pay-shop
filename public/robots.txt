@@ -1,5 +1,5 @@
 # Hamoudi Store Robots.txt
-# https://hamoudi-store.lovable.app
+# https://hamodi-pay-shop.lovable.app
 
 User-agent: Googlebot
 Allow: /
@@ -26,7 +26,7 @@ Allow: *.css
 Allow: *.js
 
 # Sitemap location
-Sitemap: https://hamoudi-store.lovable.app/sitemap.xml
+Sitemap: https://hamodi-pay-shop.lovable.app/sitemap.xml
 
 # Disallow admin and private pages
 Disallow: /admin

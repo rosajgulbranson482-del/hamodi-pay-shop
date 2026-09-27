@@ -470,6 +470,13 @@ ${orderItemsText}
       <Helmet>
         <title>إتمام الطلب | حمودي ستور</title>
         <meta name="description" content="أكمل طلبك الآن واستمتع بتوصيل سريع" />
+        <meta name="robots" content="noindex, follow" />
+        <link rel="canonical" href="https://hamodi-pay-shop.lovable.app/checkout" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="إتمام الطلب | حمودي ستور" />
+        <meta property="og:description" content="أكمل طلبك الآن واستمتع بتوصيل سريع" />
+        <meta property="og:url" content="https://hamodi-pay-shop.lovable.app/checkout" />
+        <meta property="og:site_name" content="حمودي ستور" />
       </Helmet>
 
       <div className="min-h-screen bg-background" dir="rtl" lang="ar">
@@ -477,7 +484,7 @@ ${orderItemsText}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="العودة للصفحة السابقة">
                 <ArrowRight className="w-5 h-5" />
               </Button>
               <h1 className="text-xl font-bold text-foreground">
@@ -753,7 +760,7 @@ ${orderItemsText}
                     <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
                       <Wallet className="w-8 h-8 text-primary" />
                     </div>
-                    <h3 className="text-lg font-bold">الدفع عبر فودافون كاش / انستا باي</h3>
+                    <h2 className="text-lg font-bold">الدفع عبر فودافون كاش / انستا باي</h2>
                     <p className="text-muted-foreground">
                       يرجى تحويل المبلغ <span className="font-bold text-primary">{finalTotal} ج.م</span> للرقم التالي:
                     </p>
@@ -788,10 +795,10 @@ ${orderItemsText}
             {/* Order Summary */}
             <div className="lg:col-span-1">
               <div className="bg-card rounded-2xl p-4 sm:p-6 sticky top-24">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-primary" />
                   ملخص الطلب
-                </h3>
+                </h2>
 
                 {/* Cart Items */}
                 <div className="space-y-3 max-h-64 overflow-y-auto mb-4">

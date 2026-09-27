@@ -206,7 +206,7 @@ const CategoryContent: React.FC = () => {
     );
   }
 
-  const categoryUrl = `https://hamoudi-store.lovable.app/category/${slug}`;
+  const categoryUrl = `https://hamodi-pay-shop.lovable.app/category/${slug}`;
 
   // JSON-LD for Category/Collection page
   const categorySchema = {
@@ -218,7 +218,7 @@ const CategoryContent: React.FC = () => {
     "isPartOf": {
       "@type": "WebSite",
       "name": "حمودي ستور",
-      "url": "https://hamoudi-store.lovable.app"
+      "url": "https://hamodi-pay-shop.lovable.app"
     },
     "breadcrumb": {
       "@type": "BreadcrumbList",
@@ -227,7 +227,7 @@ const CategoryContent: React.FC = () => {
           "@type": "ListItem",
           "position": 1,
           "name": "الرئيسية",
-          "item": "https://hamoudi-store.lovable.app"
+          "item": "https://hamodi-pay-shop.lovable.app"
         },
         {
           "@type": "ListItem",

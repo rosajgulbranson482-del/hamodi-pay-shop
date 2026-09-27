@@ -90,6 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
         {/* Favorite Button */}
         <button
           onClick={handleToggleFavorite}
+          aria-label={isFav ? `إزالة ${product.name} من المفضلة` : `إضافة ${product.name} إلى المفضلة`}
           className={cn(
             "absolute top-3 left-3 w-9 h-9 rounded-full flex items-center justify-center transition-all z-10",
             isFav 
