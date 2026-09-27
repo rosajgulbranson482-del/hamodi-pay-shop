@@ -798,7 +798,7 @@ ${orderItemsText}
                 <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-primary" />
                   ملخص الطلب
-                </h3>
+                </h2>
 
                 {/* Cart Items */}
                 <div className="space-y-3 max-h-64 overflow-y-auto mb-4">
