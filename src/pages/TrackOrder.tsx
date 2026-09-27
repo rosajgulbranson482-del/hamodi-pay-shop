@@ -222,7 +222,7 @@ const TrackOrder: React.FC = () => {
                   pattern="\d{4}"
                 />
               </div>
-              <Button type="submit" disabled={loading || !searchQuery.trim() || phoneLast4.length !== 4} className="px-4 md:px-6">
+              <Button type="submit" aria-label="البحث عن الطلب" disabled={loading || !searchQuery.trim() || phoneLast4.length !== 4} className="px-4 md:px-6">
                 {loading ? (
                   <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
                 ) : (
@@ -255,7 +255,7 @@ const TrackOrder: React.FC = () => {
               {/* Status Timeline */}
               {order.status !== 'cancelled' && (
                 <div className="bg-card rounded-xl md:rounded-2xl border border-border p-4 md:p-6">
-                  <h3 className="font-bold mb-4 md:mb-6 text-sm md:text-base">حالة الطلب</h3>
+                  <h2 className="font-bold mb-4 md:mb-6 text-sm md:text-base">حالة الطلب</h2>
                   <div className="relative">
                     {/* Progress Line */}
                     <div className="absolute top-4 md:top-5 right-4 md:right-5 left-4 md:left-5 h-0.5 md:h-1 bg-muted rounded-full">
@@ -305,7 +305,7 @@ const TrackOrder: React.FC = () => {
 
               {/* Order Items */}
               <div className="bg-card rounded-xl md:rounded-2xl border border-border p-4 md:p-6">
-                <h3 className="font-bold mb-3 md:mb-4 text-sm md:text-base">المنتجات</h3>
+                <h2 className="font-bold mb-3 md:mb-4 text-sm md:text-base">المنتجات</h2>
                 <div className="space-y-2 md:space-y-3">
                   {order.items.map((item) => (
                     <div key={item.id} className="flex justify-between items-center p-2.5 md:p-3 bg-muted rounded-lg">

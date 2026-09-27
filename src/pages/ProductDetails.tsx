@@ -252,11 +252,6 @@ const ProductDetailsContent = () => {
         "name": "حمودي ستور"
       }
     },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.5",
-      "reviewCount": "128"
-    },
     "category": product.category
   };
 
@@ -346,12 +341,14 @@ const ProductDetailsContent = () => {
                 <>
                   <button
                     onClick={prevImage}
+                    aria-label="الصورة السابقة"
                     className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-background/90 hover:bg-background rounded-full flex items-center justify-center shadow-lg transition-all"
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
                   <button
                     onClick={nextImage}
+                    aria-label="الصورة التالية"
                     className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-background/90 hover:bg-background rounded-full flex items-center justify-center shadow-lg transition-all"
                   >
                     <ChevronRight className="w-6 h-6" />
@@ -446,7 +443,7 @@ const ProductDetailsContent = () => {
             {/* Description */}
             {product.description && (
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">الوصف</h3>
+                <h2 className="text-lg font-semibold text-foreground mb-2">الوصف</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   {product.description}
                 </p>
@@ -532,6 +529,7 @@ const ProductDetailsContent = () => {
                   variant="outline"
                   className="py-6"
                   onClick={handleShare}
+                  aria-label="مشاركة المنتج"
                 >
                   <Share2 className="w-5 h-5" />
                 </Button>
@@ -541,6 +539,7 @@ const ProductDetailsContent = () => {
                   variant="outline"
                   className={cn("py-6", isFav && "bg-red-50 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800")}
                   onClick={() => product && toggleFavorite(product.id)}
+                  aria-label={isFav ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
                 >
                   <Heart className={cn("w-5 h-5", isFav && "fill-red-500 text-red-500")} />
                 </Button>
