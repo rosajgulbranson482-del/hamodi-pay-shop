@@ -72,7 +72,7 @@ const IndexContent: React.FC = () => {
           content="حمودي ستور - متجرك الإلكتروني الموثوق لشراء أفضل المنتجات الإلكترونية بأسعار منافسة. سماعات بلوتوث، ساعات ذكية، إكسسوارات. توصيل لجميع محافظات مصر. الدفع عند الاستلام أو فودافون كاش." 
         />
         <meta name="keywords" content="حمودي ستور, منتجات إلكترونية, مصر, فودافون كاش, انستا باي, سماعات بلوتوث, ساعات ذكية, إكسسوارات موبايل, شراء أونلاين" />
-        <link rel="canonical" href="https://hamoudi-store.lovable.app/" />
+        <link rel="canonical" href="https://hamodi-pay-shop.lovable.app/" />
         <html lang="ar" dir="rtl" />
       </Helmet>
 

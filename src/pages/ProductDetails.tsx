@@ -226,8 +226,8 @@ const ProductDetailsContent = () => {
   
   const productSlug = generateSlug(product.name);
   // Use clean canonical URL with product slug for better SEO
-  const productUrl = `https://hamoudi-store.lovable.app/product/${product.id}/${productSlug}`;
-  const productImage = product.image || 'https://hamoudi-store.lovable.app/placeholder.svg';
+  const productUrl = `https://hamodi-pay-shop.lovable.app/product/${product.id}/${productSlug}`;
+  const productImage = product.image || 'https://hamodi-pay-shop.lovable.app/placeholder.svg';
   
   // JSON-LD Schema for Product
   const productSchema = {
@@ -269,13 +269,13 @@ const ProductDetailsContent = () => {
         "@type": "ListItem",
         "position": 1,
         "name": "الرئيسية",
-        "item": "https://hamoudi-store.lovable.app/"
+        "item": "https://hamodi-pay-shop.lovable.app/"
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": product.category,
-        "item": `https://hamoudi-store.lovable.app/?category=${encodeURIComponent(product.category)}`
+        "item": `https://hamodi-pay-shop.lovable.app/?category=${encodeURIComponent(product.category)}`
       },
       {
         "@type": "ListItem",
