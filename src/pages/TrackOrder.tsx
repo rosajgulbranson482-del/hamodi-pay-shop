@@ -165,6 +165,12 @@ const TrackOrder: React.FC = () => {
       <Helmet>
         <title>تتبع الطلب | حمودي ستور</title>
         <meta name="description" content="تتبع طلبك في حمودي ستور - اعرف حالة طلبك ومكانه الآن" />
+        <link rel="canonical" href="https://hamodi-pay-shop.lovable.app/track" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="تتبع الطلب | حمودي ستور" />
+        <meta property="og:description" content="تتبع طلبك في حمودي ستور - اعرف حالة طلبك ومكانه الآن" />
+        <meta property="og:url" content="https://hamodi-pay-shop.lovable.app/track" />
+        <meta property="og:site_name" content="حمودي ستور" />
       </Helmet>
 
       {/* Header */}

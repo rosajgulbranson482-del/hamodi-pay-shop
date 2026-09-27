@@ -470,6 +470,13 @@ ${orderItemsText}
       <Helmet>
         <title>إتمام الطلب | حمودي ستور</title>
         <meta name="description" content="أكمل طلبك الآن واستمتع بتوصيل سريع" />
+        <meta name="robots" content="noindex, follow" />
+        <link rel="canonical" href="https://hamodi-pay-shop.lovable.app/checkout" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="إتمام الطلب | حمودي ستور" />
+        <meta property="og:description" content="أكمل طلبك الآن واستمتع بتوصيل سريع" />
+        <meta property="og:url" content="https://hamodi-pay-shop.lovable.app/checkout" />
+        <meta property="og:site_name" content="حمودي ستور" />
       </Helmet>
 
       <div className="min-h-screen bg-background" dir="rtl" lang="ar">
@@ -477,7 +484,7 @@ ${orderItemsText}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="العودة للصفحة السابقة">
                 <ArrowRight className="w-5 h-5" />
               </Button>
               <h1 className="text-xl font-bold text-foreground">

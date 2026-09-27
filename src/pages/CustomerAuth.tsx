@@ -189,6 +189,13 @@ const CustomerAuth: React.FC = () => {
           name="description"
           content="سجل دخولك أو أنشئ حساب جديد في حمودي ستور لتتبع طلباتك بسهولة"
         />
+        <meta name="robots" content="noindex, follow" />
+        <link rel="canonical" href="https://hamodi-pay-shop.lovable.app/auth" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={`${isSignUp ? 'إنشاء حساب' : 'تسجيل الدخول'} | حمودي ستور`} />
+        <meta property="og:description" content="سجل دخولك أو أنشئ حساب جديد في حمودي ستور لتتبع طلباتك بسهولة" />
+        <meta property="og:url" content="https://hamodi-pay-shop.lovable.app/auth" />
+        <meta property="og:site_name" content="حمودي ستور" />
       </Helmet>
 
       <div className="w-full max-w-md">
