@@ -760,7 +760,7 @@ ${orderItemsText}
                     <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
                       <Wallet className="w-8 h-8 text-primary" />
                     </div>
-                    <h3 className="text-lg font-bold">الدفع عبر فودافون كاش / انستا باي</h3>
+                    <h2 className="text-lg font-bold">الدفع عبر فودافون كاش / انستا باي</h2>
                     <p className="text-muted-foreground">
                       يرجى تحويل المبلغ <span className="font-bold text-primary">{finalTotal} ج.م</span> للرقم التالي:
                     </p>
@@ -795,7 +795,7 @@ ${orderItemsText}
             {/* Order Summary */}
             <div className="lg:col-span-1">
               <div className="bg-card rounded-2xl p-4 sm:p-6 sticky top-24">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-primary" />
                   ملخص الطلب
                 </h3>
